@@ -1,0 +1,799 @@
+// Simplified and organized version of BlockAction.cs
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using DG.Tweening;
+using TMPro;
+using Unity.VisualScripting;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+public class BlockAction : MonoBehaviour
+{
+    #region Serialized Fields
+    [Header("System")]
+    [SerializeField] GameManager gameManager;
+    [SerializeField] GameOver gameOver;
+    [SerializeField] Vector2 rotateInput;
+
+    [Header("Block Settings")]
+    [SerializeField] float dropSpeed;
+    [SerializeField] public Transform pivotObj;
+    [SerializeField] GameObject cubePrefab;
+    [SerializeField] GameObject weightedCubePrefab;
+    [SerializeField] GameObject fillCubePrefab;
+    [SerializeField] Material lineMaterial;
+    [SerializeField] Transform ground;
+    [SerializeField] CameraController cameraController;
+    [SerializeField] TextMeshProUGUI text;
+    [SerializeField, Range(1, 18)] public int blockIndex;
+    [SerializeField] NextBlockPreview nextBlockPreview;
+
+
+
+    [Header("Audio")]
+    [SerializeField]
+    AudioClip[] audioClips;
+    [SerializeField]
+    AudioSource bgmSource;
+    [SerializeField]
+    int deltaFreq;
+
+
+    [Header("TGS")]
+    [SerializeField] ActionTimer actionTimer;
+    #endregion
+
+
+
+    #region Private Fields
+    Rigidbody rb;
+    InputController ic;
+    GhostBlockPreview ghostSystem;
+    AudioSource audioSource;
+    List<GameObject> rootObj = new();
+    List<Vector3> rootRotation = new();
+    List<float> nowAngle = new();
+    List<Color> PentacubeColors = new() {
+        Color.white,
+        Color.red,
+        Color.green,
+        Color.yellow,
+        Color.magenta,
+        new Color(0.678f, 0.847f, 0.902f),
+
+    };
+
+    Vector3 weightedBlockOffset;
+
+    public FlagsStatus flagStatus;
+
+    Vector3 moveInput;
+    float nowHighestPoint;
+    int colorCount;
+
+
+
+
+
+    [SerializeField]
+    int blockCount;
+    float timer;
+    public int[] blockHistory = new int[3] { -1, -1, -1 };
+    public Color[] colorHistory = new Color[3];
+    float moveInputCooldown;
+    float rotateInputCooldown;
+
+
+    #endregion
+
+    #region BGM Related
+
+    int totalPCMFrequency;
+    int prevFreq;
+    int nowFreq;
+
+    #endregion
+
+    #region Public Fields
+    public int placedBlockCount;
+    public int height;
+    public Vector3 origin;
+    public Vector3[] fillVertex;
+    #endregion
+
+    #region Unity Methods
+    private void Start()
+    {
+        flagStatus = FlagsStatus.FirstDrop;
+
+        fillVertex = new Vector3[2];
+
+        Time.timeScale = 1;
+        Cursor.visible = InGameSetting.isCursorVisible;
+
+        rb = GetComponent<Rigidbody>();
+        rb.isKinematic = false;
+        rb.useGravity = false;
+
+        ghostSystem = GetComponent<GhostBlockPreview>();
+        audioSource = GetComponent<AudioSource>();
+        audioSource.volume = .001f * InGameSetting.masterVolume;
+
+        blockCount = 0;
+        totalPCMFrequency = bgmSource.clip.frequency * (int)bgmSource.clip.length;
+
+        timer = 0;
+    }
+
+    private void Update()
+    {
+        if (GameStatus.gameState == GAME_STATE.GAME_TITLE || GameStatus.gameState == GAME_STATE.GAME_OVER) return;
+        if (GameStatus.gameState == GAME_STATE.GAME_READYTOPLAY && ((flagStatus & FlagsStatus.ReadyToPlay) != FlagsStatus.ReadyToPlay) )
+        {
+            flagStatus |= FlagsStatus.ReadyToPlay;
+            gameManager.ChangeGameState(GAME_STATE.GAME_READYTOPLAY);
+
+            ic = new();
+            ic.Block.Move.performed += OnMove;
+            ic.Block.Rotate.performed += OnRotate;
+            ic.Block.Drop.started += OnDrop;
+            ic.Camera.Switch.started += OnCameraSwitch;
+            ic.Enable();
+
+            timer = 1;
+        }
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        if (moveInputCooldown > 0) moveInputCooldown-= Time.deltaTime;
+        if (rotateInputCooldown > 0) rotateInputCooldown -= Time.deltaTime;
+
+        if ((flagStatus & FlagsStatus.PressDownButton) == FlagsStatus.PressDownButton)
+            rb.MovePosition(rb.position + Vector3.down * dropSpeed * Time.deltaTime);
+
+        if (pivotObj == null)
+        {
+            var genPos = GetHighestPoint();
+            genPos.y += 5;
+            this.transform.position = genPos ;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (GameStatus.gameState == GAME_STATE.GAME_TITLE || GameStatus.gameState == GAME_STATE.GAME_OVER) return;
+        if (audioSource && audioSource.clip)
+        {
+            if (audioSource.time / audioSource.clip.length >= .9)
+            {
+                audioSource.time = 0;
+                audioSource.clip = null;
+            }
+        }
+        if (pivotObj)
+            CheckBlockConnectability();
+        else
+            do { HandleNewBlockSpawn(); } while (blockHistory[2] == -1);
+        if (nowFreq != prevFreq)
+        {
+            prevFreq = nowFreq;
+            StartCoroutine(Execution());
+        }
+        nowFreq = bgmSource.timeSamples - bgmSource.timeSamples % deltaFreq;
+
+    }
+
+    IEnumerator Execution()
+    {
+        if ((flagStatus & FlagsStatus.Drop) == FlagsStatus.Drop)
+        {
+            flagStatus &= ~FlagsStatus.Drop;
+            if (ghostSystem.ghostBlock != null)
+            {
+                for (int i = 0; i < pivotObj.childCount; i++)
+                {
+                    if (pivotObj.GetChild(i).GetComponent<CheckCore>() != null)
+                    {
+                        pivotObj.GetChild(i).gameObject.layer = LayerMask.NameToLayer("Core");
+                        break;
+                    }
+                }
+
+                if ((flagStatus & FlagsStatus.FirstDrop) == FlagsStatus.FirstDrop)
+                {
+                    flagStatus &= ~FlagsStatus.FirstDrop;
+                    rb.DOMoveY((ghostSystem.ghostBlock.position + Vector3.up * .5f).y, 1f).SetEase(Ease.InSine);
+                    Vector3 maxValue = pivotObj.position + new Vector3(2, 0, 2);
+                    Vector3 minValue = pivotObj.position - new Vector3(2, 0, 2);
+                    GameObject floor = new GameObject("Ground");
+                    maxValue += Vector3.one;
+                    for (int x = (int)minValue.x; x < maxValue.x; x++)
+                    {
+                        for (int z = (int)minValue.z; z < maxValue.z; z++)
+                        {
+                            GameObject go = Instantiate(cubePrefab, new Vector3(x, -4, z), Quaternion.identity);
+                            go.transform.parent = floor.transform;
+                            go.tag = "Ground";
+                        }
+                    }
+                    origin = pivotObj.position;
+                    cameraController.transform.DOMove(new Vector3(pivotObj.position.x, 0, pivotObj.position.z), .2f);
+                    cameraController.startPos = origin;
+                    gameManager.ChangeGameState(GAME_STATE.GAME_INGAME);
+                    floor.tag = "Ground";
+                    floor.AddComponent<Rigidbody>().isKinematic = true;
+                }
+                else
+                {
+                    rb.DOMoveY(rb.position.y - 3, .05f).SetEase(Ease.InSine);
+                    Vector3 ghostPos = ghostSystem.ghostBlock.position;
+                    yield return new WaitForSeconds(.05f);
+                    rb.position = ghostPos + Vector3.up * .51f;
+                }
+
+                flagStatus |= FlagsStatus.PressDownButton;
+                flagStatus &= ~FlagsStatus.Move;
+                flagStatus &= ~FlagsStatus.Rotate;
+                flagStatus &= ~FlagsStatus.GenerateBlock;
+                ghostSystem.isActive = false;
+            }
+        }
+        else
+        {
+            if ((flagStatus & FlagsStatus.Move) == FlagsStatus.Move)
+            {
+                flagStatus &= ~FlagsStatus.Move;
+            }
+            if ((flagStatus & FlagsStatus.Rotate) == FlagsStatus.Rotate)
+            {
+                flagStatus &= ~FlagsStatus.Rotate;
+            }
+            if ((flagStatus & FlagsStatus.GenerateBlock) == FlagsStatus.GenerateBlock)
+            {
+                if (blockHistory[blockHistory.Length - 1] != -1)
+                {
+                    GenerateBlock(blockHistory[blockHistory.Length - 1]);
+                }
+                flagStatus &= ~FlagsStatus.GenerateBlock;
+            }
+
+        }
+
+    }
+
+    private void LateUpdate()
+    {
+        if (GameStatus.gameState == GAME_STATE.GAME_TITLE || GameStatus.gameState == GAME_STATE.GAME_OVER) return;
+        if (rootObj.Count <= 0) return;
+
+    }
+
+    private void OnDestroy() 
+    {
+        ic.Block.Disable();
+        ic.Camera.Disable();
+        ic.Dispose(); 
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (GameStatus.gameState == GAME_STATE.GAME_TITLE || GameStatus.gameState == GAME_STATE.GAME_OVER) return;
+        if (pivotObj == null) return;
+
+        bool isReturn = true;
+
+        foreach (ContactPoint contact in collision.contacts)
+        {
+            Vector3 normal = contact.normal;
+
+            if (Vector3.Dot(normal, Vector3.up) > .9f) 
+            {
+                isReturn = false;
+                break;
+            }
+        }
+        if (isReturn) return;
+
+        if (collision.gameObject.CompareTag("GameOver"))
+        {
+            gameOver.isGameOver = true;
+            return;
+        }
+        if ((flagStatus & FlagsStatus.Connectable) != FlagsStatus.Connectable && !collision.gameObject.CompareTag("Ground")) return;
+        if (pivotObj == null || collision == null || (!collision.gameObject.CompareTag("Ground") && !collision.gameObject.CompareTag("Placed") && (flagStatus & FlagsStatus.Connectable) != FlagsStatus.Connectable)) return;
+
+        actionTimer.blockCount++;
+
+        pivotObj.tag = "Placed";
+        pivotObj.parent = null;
+        pivotObj.GetComponent<BlockColor>().heightWhenSet = pivotObj.transform.position.y;
+        pivotObj.GetComponent<BlockColor>().startNor = pivotObj.transform.up;
+        pivotObj.GetComponent<BlockColor>().isGhost = false;
+        pivotObj.GetComponent<BlockColor>().originPos = origin;
+        for (int i = 0; i < pivotObj.childCount; i++)
+        {
+            Transform child = pivotObj.GetChild(i);
+            child.tag = "Placed";
+            child.GetComponent<BoxCollider>().enabled = true;
+            child.GetComponent<MeshRenderer>().enabled = true;
+            child.GetChild(0).GetComponent<MeshRenderer>().enabled = false;
+            for (int j = 0; j < child.GetChild(1).childCount; j++)
+            {
+                ParticleSystem particle = child.GetChild(1).GetChild(j).GetComponent<ParticleSystem>();
+                if (particle != null)
+                {
+                    particle.transform.rotation = Quaternion.Euler(90, 0, 0);
+                    particle.transform.position = child.GetChild(1).transform.position - new Vector3(0, .5f, 0);
+
+                    if ((Physics.Raycast(child.position + Vector3.down * .3f, Vector3.down, out RaycastHit hit, 1f) &&
+                        (hit.collider.CompareTag("Ground") || hit.collider.CompareTag("Placed")))||
+                        particle.gameObject.name.Contains("Box"))
+                    {
+                        Gradient gradient = new Gradient();
+                        gradient.SetKeys(new GradientColorKey[]
+                        {
+                        new GradientColorKey(colorHistory[colorHistory.Length - 1], 0f),
+                        new GradientColorKey(colorHistory[colorHistory.Length - 1], 1f)
+                        },
+                        new GradientAlphaKey[]
+                        {
+                        new GradientAlphaKey(1, 0),
+                        new GradientAlphaKey(0, 1)
+                        });
+                        var col = particle.colorOverLifetime;
+                        col.enabled = true;
+
+                        col.color = new ParticleSystem.MinMaxGradient(gradient);
+                      
+                        particle.Play();
+                    }
+                }
+            }
+        }
+
+        audioSource.clip = audioClips[0];
+        audioSource.time = .5f;
+        audioSource.Play();
+        Rigidbody toRb = pivotObj.gameObject.AddComponent<Rigidbody>();
+
+        if (fillVertex[0] != fillVertex[1])
+        {
+            Vector3 dir = fillVertex[1] - fillVertex[0];
+
+        }
+
+        if (collision.gameObject.GetComponent<BlockColor>() != null && pivotObj.GetComponent<BlockColor>().blockColor == collision.gameObject.GetComponent<BlockColor>().blockColor)
+        {
+            Rigidbody fromRb = collision.transform.parent ? collision.transform.parent.GetComponent<Rigidbody>() : collision.gameObject.GetComponent<Rigidbody>();
+            toRb.interpolation = RigidbodyInterpolation.Interpolate;
+            HingeJoint hinge = toRb.gameObject.AddComponent<HingeJoint>();
+            hinge.connectedBody = fromRb;
+            hinge.anchor = Vector3.zero;
+            hinge.axis = Vector3.up;
+            hinge.useLimits = true;
+            hinge.limits = new JointLimits { min = 0, max = 0 };
+            hinge.enablePreprocessing = false;
+            hinge.enableCollision = false;
+            pivotObj = null;
+        }
+        else
+        {
+            pivotObj = null;
+            if (collision.gameObject.CompareTag("Ground"))
+            {
+                rootRotation.Add(new Vector3(toRb.transform.rotation.x, toRb.transform.rotation.y, toRb.transform.rotation.z));
+                nowAngle.Add(0);
+                rootObj.Add(toRb.gameObject);
+            }
+            else
+            {
+                toRb.isKinematic = false;
+                toRb.mass = .2f;
+                toRb.collisionDetectionMode = CollisionDetectionMode.Discrete;
+                toRb.angularDamping = 5;
+                toRb.automaticCenterOfMass = false;
+                toRb.centerOfMass = weightedBlockOffset;
+            }
+        }
+
+        actionTimer.RecoveryTimer();
+        actionTimer.AddPoint(height + 3.5f);
+
+    }
+    #endregion
+
+
+    #region Input Callbacks
+    void OnCameraSwitch(InputAction.CallbackContext context)
+    {
+        if ((flagStatus & FlagsStatus.Collapse) != FlagsStatus.Collapse && (flagStatus & FlagsStatus.CameraRotate) != FlagsStatus.CameraRotate)
+        {
+            cameraController.SwitchCamera(context.ReadValue<Vector2>().x > 0);
+            flagStatus |= FlagsStatus.CameraRotate;
+        }
+
+    }
+
+    void OnMove(InputAction.CallbackContext context)
+    {
+        if (pivotObj == null) return;
+        if (GameStatus.gameState == GAME_STATE.GAME_TITLE || GameStatus.gameState == GAME_STATE.GAME_OVER) return;
+        if ((flagStatus & FlagsStatus.Collapse) == FlagsStatus.Collapse || (flagStatus & FlagsStatus.PressDownButton) == FlagsStatus.PressDownButton || moveInputCooldown > 0 || context.ReadValue<Vector2>().magnitude < .5f) return;
+
+        Vector2 input = context.ReadValue<Vector2>();
+        Vector3 moveDir = Vector3.zero;
+
+        if (Mathf.Abs(input.x) > .2f && Mathf.Abs(input.y) <= .2f)
+            moveDir = new Vector3(Mathf.Sign(input.x), 0, -Mathf.Sign(input.x));
+        else if (Mathf.Abs(input.y) > .2f && Mathf.Abs(input.x) <= .2f)
+            moveDir = new Vector3(Mathf.Sign(input.y), 0, Mathf.Sign(input.y));
+        else
+        {
+            if (input.x < 0)
+            {
+                if (input.y < 0) moveDir.x = -1;
+                else moveDir.z = 1;
+            }
+            else
+            {
+                if (input.y < 0) moveDir.z = -1;
+                else moveDir.x = 1;
+            }
+        }
+
+        float tempX = moveDir.x;
+        float tempY = moveDir.z;
+
+        switch (cameraController.cameraIndex)
+        {
+            case 0: moveDir = new Vector3(tempX, 0, tempY); break;
+            case 1: moveDir = new Vector3(-tempY, 0, tempX); break;
+            case 2: moveDir = new Vector3(-tempX, 0, -tempY); break;
+            case 3: moveDir = new Vector3(tempY, 0, -tempX); break;
+        }
+
+        if (GameStatus.gameState == GAME_STATE.GAME_READYTOPLAY)
+        {
+            if ((moveDir.x > 0 && transform.position.x >= 3) || (moveDir.x < 0 && transform.position.x <= -3)) moveDir.x = 0;
+            if ((moveDir.z > 0 && transform.position.z >= 3) || (moveDir.z < 0 && transform.position.z <= -3)) moveDir.z = 0;
+        }
+
+        // Preview where it will move
+        moveInput = rb.position + moveDir;
+
+        flagStatus |= FlagsStatus.Move;
+        moveInputCooldown = .1f;
+        moveInput = new Vector3Int(Mathf.RoundToInt(moveInput.x), Mathf.RoundToInt(moveInput.y), Mathf.RoundToInt(moveInput.z));
+        transform.position = moveInput;
+        // Manually preview ghost at the new position
+        if (ghostSystem != null && ghostSystem.pivotObj != null)
+        {
+            ghostSystem.pivotObj.position = moveInput;
+            ghostSystem.UpdateGhostPosition();
+        }
+
+    }
+
+    void OnDrop(InputAction.CallbackContext context)
+    {
+        if ((flagStatus & FlagsStatus.PressDownButton) == FlagsStatus.PressDownButton || (flagStatus & FlagsStatus.Collapse) == FlagsStatus.Collapse || pivotObj == null) return;
+        ic.Block.Disable();
+        flagStatus |= FlagsStatus.Drop;
+        
+    }
+
+    void OnRotate(InputAction.CallbackContext context)
+    {
+        if ((flagStatus & FlagsStatus.Collapse) == FlagsStatus.Collapse || (flagStatus & FlagsStatus.PressDownButton) == FlagsStatus.PressDownButton || rotateInputCooldown > 0 || context.ReadValue<Vector2>().magnitude < .5f) return;
+
+        Vector2 readValue = context.ReadValue<Vector2>();
+        rotateInput = readValue;
+        Vector3 axis = Vector3.zero;
+        if (Mathf.Abs(readValue.x) >= .5f && Mathf.Abs(readValue.y) <= .2f) //horizontal
+        {
+            axis.y = 1 ;
+        }
+        else if (Mathf.Abs(readValue.x) >= .15f && Mathf.Abs(readValue.y) >= .25f)
+        {
+            switch (cameraController.cameraIndex)
+            {
+                case 0:
+                    if (Mathf.Sign(readValue.x) == Mathf.Sign(readValue.y)) axis.z = -1; else axis.x = -1;
+                    break;
+                case 1:
+                    if (Mathf.Sign(readValue.x) == Mathf.Sign(readValue.y)) axis.x = 1; else axis.z = -1;
+                    break;
+                case 2:
+                    if (Mathf.Sign(readValue.x) == Mathf.Sign(readValue.y)) axis.z = 1; else axis.x = 1;
+                    break;
+                case 3:
+                    if (Mathf.Sign(readValue.x) == Mathf.Sign(readValue.y)) axis.x = -1; else axis.z = 1;
+                    break;
+            }
+        }
+        rotateInputCooldown = .2f;
+        BlockDORotateAround(axis, .2f, Mathf.Sign(readValue.x));
+
+    }
+    #endregion
+
+    #region Block Management
+
+    float prevValue;
+    void RotateAroundPrc(float value, Vector3 axis)
+    {
+        float delta = value - prevValue;
+        transform.RotateAround(transform.position, axis, delta);
+        prevValue = value;
+    }
+
+    Tween BlockDORotateAround(Vector3 axis, float duration, float sign)
+    {
+        Tween ret;
+        float endValue = 0;
+        if (Mathf.Abs(axis.x) >= 1)
+        {
+            prevValue = transform.eulerAngles.x;
+            endValue = transform.eulerAngles.x + 90 * sign;
+        }
+        else if (Mathf.Abs(axis.y) >= 1)
+        {
+            prevValue = transform.eulerAngles.y;
+            endValue = transform.eulerAngles.y + 90 * sign;
+        }
+        else if (Mathf.Abs(axis.z) >= 1)
+        {
+            prevValue = transform.eulerAngles.z;
+            endValue = transform.eulerAngles.z + 90 * sign;
+        }
+        else return null;
+        ret = DOTween.To(x => RotateAroundPrc(x, axis), prevValue, endValue, .2f).OnComplete(() => ghostSystem?.UpdateGhostPosition());
+
+        return ret;
+    }
+
+    public void TowerCollapse()
+    {
+        if ((flagStatus & FlagsStatus.Collapse) == FlagsStatus.Collapse || blockCount <= 0) return;
+        flagStatus |= FlagsStatus.Collapse;
+        if (ghostSystem != null) ghostSystem.isActive = false;
+
+        foreach (var b in GameObject.FindGameObjectsWithTag("Placed"))
+        {
+            var hinge = b.GetComponent<HingeJoint>();
+            if (hinge != null)
+            {
+                hinge.enableCollision = true;
+                Destroy(hinge);
+            }
+        }
+
+        Destroy(pivotObj?.gameObject);
+        audioSource.PlayOneShot(audioClips[1]);
+        cameraController.SwitchCamera(true);
+        gameOver.isGameOver = true;
+    }
+
+    void CheckBlockConnectability()
+    {
+        if ((flagStatus & FlagsStatus.Connectable) == FlagsStatus.Connectable || pivotObj.position.y < -4)
+        {
+            foreach (Transform child in pivotObj)
+                child.GetComponent<Collider>().enabled = true;
+            flagStatus |= FlagsStatus.Connectable;
+        }
+        else
+        {
+
+            Vector3[] offsets = new Vector3[]
+            {
+                Vector3.zero,
+                new Vector3(.3f, 0, .3f),
+                new Vector3(-.3f, 0, .3f),
+                new Vector3(.3f, 0, -.3f),
+                new Vector3(-.3f, 0, -.3f),
+            };
+            foreach (Transform child in pivotObj)
+            {
+                foreach (var offset in offsets)
+                {
+                    if (Physics.Raycast(child.position + offset, Vector3.down, out RaycastHit hit, 2f) &&
+                        (hit.collider.CompareTag("Placed") || hit.collider.CompareTag("Ground")))
+                    {
+                        flagStatus |= FlagsStatus.Connectable;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    void HandleNewBlockSpawn()
+    {
+        timer += Time.deltaTime;
+        if (timer > 0.75f && (flagStatus & FlagsStatus.Collapse) != FlagsStatus.Collapse)
+        {
+            int tempIndex = 0;
+            placedBlockCount = blockCount;
+            blockCount++;
+            colorCount = (colorCount + 1) % PentacubeColors.Count;
+            if (colorCount <= 1) colorCount = 2;
+
+            bool isHistoryIncluded = true;
+
+            while (isHistoryIncluded)
+            {
+                isHistoryIncluded = false;
+                if (blockCount <= 1)
+                    tempIndex = UnityEngine.Random.Range(5, 10);
+                else if (blockCount <= 3)
+                    tempIndex = UnityEngine.Random.Range(2, 11);
+                else if (blockCount == 4)
+                    tempIndex = UnityEngine.Random.Range(11, 19);
+                else
+                    tempIndex = UnityEngine.Random.Range(1, 19);
+
+                foreach (var h in blockHistory)
+                {
+                    if (h == tempIndex)
+                    {
+                        isHistoryIncluded = true;
+                        break;
+                    }
+                }
+            }
+
+            for (int i = blockHistory.Length - 1; i > 0; i--)
+            {
+                blockHistory[i] = blockHistory[i - 1];
+                colorHistory[i] = colorHistory[i - 1];
+            }
+
+            blockHistory[0] = tempIndex; colorHistory[0] = PentacubeColors[colorCount];
+            timer = 0;
+            flagStatus |= FlagsStatus.GenerateBlock;
+        }
+    }
+
+    public void GenerateBlock(int index)
+    {
+        if (pivotObj) Destroy(pivotObj.gameObject);
+
+        for (int i = 0; i < fillVertex.Length; i++)
+        {
+            fillVertex[i] = Vector3.zero;
+        }
+
+        for (int i = 0;  i < blockHistory.Length; i++)
+        {
+            nextBlockPreview.GeneratePreviewBlock(i, blockHistory[i]);
+        }
+        Block3DType blockType = (Block3DType)index;
+        Vector3 genPos = cameraController.transform.position;
+        genPos.y = GetHighestPoint(true).y;
+        cameraController.MoveCamera(genPos);        
+        genPos.y += 5;
+
+
+        transform.position = RoundOffVec3(genPos);
+        transform.rotation = Quaternion.identity;
+
+
+        pivotObj = new GameObject($"Block {blockCount}").transform;
+        pivotObj.parent = transform;
+        pivotObj.localPosition = Vector3.zero;
+        BlockColor pivotColor = pivotObj.AddComponent<BlockColor>();
+        pivotColor.blockAction = this;
+        pivotColor.blockColor = colorHistory[2];
+        int cubeCount = 0;
+        foreach (Vector3 offset in PentacubeShapes.Shapes[blockType])
+        {
+            GameObject obj;
+            if (offset == Vector3.zero)
+            {
+                obj = Instantiate(weightedCubePrefab, transform.position + offset, Quaternion.identity, pivotObj);
+                weightedBlockOffset = offset;
+            }
+            else
+            {
+                obj = Instantiate(cubePrefab, transform.position + offset, Quaternion.identity, pivotObj);
+            }
+            
+            obj.GetComponent<BoxCollider>().enabled = false;
+            obj.GetComponent<MeshRenderer>().material.color = colorHistory[2];
+            obj.GetComponent<MeshRenderer>().enabled = true;
+            cubeCount++;
+        }
+
+
+        if (ghostSystem != null && index != 0)
+        {
+            ghostSystem.pivotObj = pivotObj;
+            ghostSystem.isActive = true;
+            ghostSystem.CreateGhost(pivotObj.gameObject, pivotColor.blockColor);
+            ghostSystem.UpdateGhostPosition();
+        }
+
+        flagStatus &= ~FlagsStatus.PressDownButton;
+        flagStatus &= ~FlagsStatus.Connectable;
+        flagStatus &= ~FlagsStatus.GenerateBlock;
+        if (ic != null) ic.Block.Enable();
+    }
+
+    Vector3 RoundOffVec3(Vector3 value)
+    {
+        Vector3 result;
+        result.x = Mathf.Round(value.x);
+        result.y = Mathf.Round(value.y);
+        result.z = Mathf.Round(value.z);
+        return result;
+    }
+
+    public Vector3 GetHighestPoint(bool update = false)
+    {
+        Vector3 minPos = Vector3.positiveInfinity;
+        Vector3 maxPos = Vector3.negativeInfinity;
+        float highestY = -3.5f;
+        Transform topObj = null;
+
+        foreach (GameObject obj in GameObject.FindGameObjectsWithTag("Placed"))
+        {
+            if (!obj.activeInHierarchy) continue;
+            MeshRenderer mr = obj.GetComponent<MeshRenderer>();
+            if (!mr) continue;
+            float topY = mr.bounds.max.y;
+            if (topY > highestY)
+            {
+                highestY = topY;
+                topObj = obj.transform.parent;
+            }
+        }
+
+        if (highestY > -3.5f && highestY + 3.5f > PlayerPrefs.GetFloat("highScore"))
+            PlayerPrefs.SetFloat("highScore", highestY + 3.5f);
+
+        if (highestY > nowHighestPoint && update)
+        {
+            nowHighestPoint = highestY;
+        }
+
+        if (topObj == null) return Vector3.down * 3.5f;
+
+        for (int i = 0; i < topObj.childCount; i++)
+        {
+            MeshRenderer mr = topObj.GetChild(i).GetComponent<MeshRenderer>();
+            if (!mr) continue;
+            if (mr.bounds.max.x > maxPos.x) maxPos.x = mr.bounds.max.x;
+            if (mr.bounds.min.x < minPos.x) minPos.x = mr.bounds.min.x;
+            if (mr.bounds.max.z > maxPos.z) maxPos.z = mr.bounds.max.z;
+            if (mr.bounds.min.z < minPos.z) minPos.z = mr.bounds.min.z;
+        }
+
+
+        if (height < highestY) height = (int)highestY;
+
+        return new Vector3((maxPos.x + minPos.x) / 2, Mathf.Max(0, highestY), (maxPos.z + minPos.z) / 2);
+    }
+    #endregion
+}
+
+[Flags]
+public enum FlagsStatus
+{
+    None = 0,
+    Connectable = 1 << 0,
+    PressDownButton = 1 << 1,
+    Collapse = 1 << 2,
+    FirstDrop = 1 << 3,
+    ReadyToPlay = 1 << 4,
+
+    Drop = 1 << 5,
+    Rotate = 1 << 6,
+    GenerateBlock = 1 << 7,
+    Move = 1 << 8,
+    CameraRotate = 1 << 9,
+}
