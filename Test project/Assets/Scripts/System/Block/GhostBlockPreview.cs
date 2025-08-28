@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GhostBlockPreview : MonoBehaviour
@@ -17,6 +18,7 @@ public class GhostBlockPreview : MonoBehaviour
     #region Fill field
     [SerializeField] GameObject fillBlockPrefab;
     public GameObject fillGhostParent;
+    public List<GameObject> tempClearObjs = new();
     #endregion
 
 
@@ -135,6 +137,23 @@ public class GhostBlockPreview : MonoBehaviour
                         Debug.Log($"{maxVertex} {minVertex}");
                         blockAction.fillVertex[0] = minVertex;
                         blockAction.fillVertex[1] = maxVertex;
+                        GameObject[] placedObj = GameObject.FindGameObjectsWithTag("Placed");
+                        foreach (var obj in placedObj)
+                        {
+                            for (int i = 0; i < obj.transform.childCount; i++)
+                            {
+                                GameObject children = obj.transform.GetChild(i).gameObject;
+                                if (children.transform.position.x > minVertex.x - .1f && children.transform.position.x < maxVertex.x + .1f &&
+                                    children.transform.position.y > minVertex.y - .1f && children.transform.position.y < maxVertex.y + .1f &&
+                                    children.transform.position.z > minVertex.z - .1f && children.transform.position.z < maxVertex.z + .1f &&
+                                    children.GetComponent<MeshRenderer>() != null)
+                                {
+                                    tempClearObjs.Add(children);
+                                    children.GetComponent<MeshRenderer>().enabled = false;
+                                }
+                            }
+
+                        }
                         for (float x  = minVertex.x; x <= maxVertex.x; x += 1)
                         {
                             for (float y = minVertex.y; y <= maxVertex.y; y += 1)
@@ -146,7 +165,12 @@ public class GhostBlockPreview : MonoBehaviour
                             }
                         }
                     }
-                    else for (int i = 0; i < blockAction.fillVertex.Length; i++) blockAction.fillVertex[i] = Vector3.zero;
+                    else
+                    {
+                        for (int i = 0; i < blockAction.fillVertex.Length; i++) blockAction.fillVertex[i] = Vector3.zero;
+                        foreach (var obj in tempClearObjs) obj.GetComponent<MeshRenderer>().enabled = true;
+                        tempClearObjs.Clear();
+                    }
                     tempCol.a = .9f;
                 }
                 else
@@ -167,7 +191,9 @@ public class GhostBlockPreview : MonoBehaviour
         if (!isActive)
         {
             if (ghostBlock != null) Destroy(ghostBlock.gameObject);
-            if (fillGhostParent != null) Destroy(fillGhostParent.gameObject); 
+            if (fillGhostParent != null) Destroy(fillGhostParent.gameObject);
+            foreach (var obj in tempClearObjs) obj.GetComponent<MeshRenderer>().enabled = true;
+            tempClearObjs.Clear();
         }
     }
 }

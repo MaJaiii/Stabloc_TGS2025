@@ -75,10 +75,6 @@ public class BlockAction : MonoBehaviour
     float nowHighestPoint;
     int colorCount;
 
-
-
-
-
     [SerializeField]
     int blockCount;
     float timer;
@@ -221,8 +217,9 @@ public class BlockAction : MonoBehaviour
                         }
                     }
                     origin = pivotObj.position;
+                    GameStatus.fieldOrigin.x = Mathf.RoundToInt(origin.x); GameStatus.fieldOrigin.z = Mathf.RoundToInt(origin.z); GameStatus.fieldOrigin.y = Mathf.RoundToInt(origin.y);
                     cameraController.transform.DOMove(new Vector3(pivotObj.position.x, 0, pivotObj.position.z), .2f);
-                    cameraController.startPos = origin;
+                    cameraController.startPos = pivotObj.position;
                     gameManager.ChangeGameState(GAME_STATE.GAME_INGAME);
                     floor.tag = "Ground";
                     floor.AddComponent<Rigidbody>().isKinematic = true;
@@ -363,7 +360,47 @@ public class BlockAction : MonoBehaviour
         if (fillVertex[0] != fillVertex[1])
         {
             Vector3 dir = fillVertex[1] - fillVertex[0];
+            StartCoroutine(VibrateGamepad(.8f, .8f, 0.1f));
+            if (Mathf.Abs(dir.y) < .2f)
+            {
+                GameObject[] placedObjs = GameObject.FindGameObjectsWithTag("Placed");
+                foreach (var obj in placedObjs)
+                {
+                    if (obj.name.Contains("Cube") && obj != null && !obj.transform.parent.name.Contains("ReleasePt"))
+                    {
+                        if (Mathf.Abs(obj.transform.position.y - fillVertex[1].y) < .2f) Destroy(obj.gameObject);
+                        else
+                        {
+                            obj.transform.parent.GetComponent<Rigidbody>().isKinematic = true;
+                            obj.GetComponent<MeshRenderer>().material.color = Color.white;
+                            obj.tag = "Ground";
+                            if (obj.GetComponent<CheckCore>() != null)
+                            {
+                                Destroy(obj.GetComponent<CheckCore>());
+                                Destroy(obj.GetComponent<BlockWeight>());
+                                Destroy(obj.transform.GetChild(2).gameObject);  
+                            }
+                        }
+                    }
+                }
 
+                GameObject newGroundParentObj = new GameObject("Ground");
+                newGroundParentObj.tag = "Ground";
+                for (float x = fillVertex[0].x ; x <= fillVertex[1].x; x++)
+                {
+                    for (float z = fillVertex[0].z ; z <= fillVertex[1].z ; z++)
+                    {
+                        GameObject obj = Instantiate(cubePrefab, new Vector3(x, fillVertex[1].y, z), Quaternion.identity, newGroundParentObj.transform);
+                        obj.GetComponent<MeshRenderer>().material.color = Color.white;
+                        obj.tag = "Ground";
+                    }
+                }
+                newGroundParentObj.AddComponent<Rigidbody>().isKinematic = true;
+            }
+        }
+        else
+        {
+            StartCoroutine(VibrateGamepad(0, .5f, 0.1f));
         }
 
         if (collision.gameObject.GetComponent<BlockColor>() != null && pivotObj.GetComponent<BlockColor>().blockColor == collision.gameObject.GetComponent<BlockColor>().blockColor)
@@ -752,6 +789,18 @@ public class BlockAction : MonoBehaviour
                 topObj = obj.transform.parent;
             }
         }
+        foreach (GameObject obj in GameObject.FindGameObjectsWithTag("Ground"))
+        {
+            if (!obj.activeInHierarchy) continue;
+            MeshRenderer mr = obj.GetComponent<MeshRenderer>();
+            if (!mr) continue;
+            float topY = mr.bounds.max.y;
+            if (topY > highestY)
+            {
+                highestY = topY;
+                topObj = obj.transform.parent;
+            }
+        }
 
         if (highestY > -3.5f && highestY + 3.5f > PlayerPrefs.GetFloat("highScore"))
             PlayerPrefs.SetFloat("highScore", highestY + 3.5f);
@@ -779,6 +828,18 @@ public class BlockAction : MonoBehaviour
         return new Vector3((maxPos.x + minPos.x) / 2, Mathf.Max(0, highestY), (maxPos.z + minPos.z) / 2);
     }
     #endregion
+
+    IEnumerator VibrateGamepad(float rate_L, float rate_R, float duration)
+    {
+        if (Gamepad.current != null)
+        {
+            Gamepad.current.SetMotorSpeeds(rate_L, rate_R);
+            if (duration > 0) yield return new WaitForSeconds(duration);
+            else yield return new WaitForEndOfFrame();
+            Gamepad.current.SetMotorSpeeds(0, 0);
+        }
+
+    }
 }
 
 [Flags]

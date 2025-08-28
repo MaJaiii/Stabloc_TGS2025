@@ -171,4 +171,5 @@ public enum GAME_STATE
 public static class GameStatus
 {
     public static GAME_STATE gameState;
+    public static Vector3Int fieldOrigin;
 }
