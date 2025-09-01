@@ -18,8 +18,8 @@ public class BlockColor : MonoBehaviour
         nowNor = transform.up;
         if (Vector3.Dot(startNor, nowNor) < .6f && !isGhost && (Mathf.Abs(transform.position.x - GameStatus.fieldOrigin.x) > 2.5f || Mathf.Abs(transform.position.z - GameStatus.fieldOrigin.z) > 2.5f))
         {
-            blockAction.TowerCollapse();
             isCollapse = true;
         }
+        
     }
 }

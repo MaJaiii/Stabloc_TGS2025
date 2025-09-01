@@ -24,7 +24,7 @@ public class BlockAction : MonoBehaviour
     [SerializeField] public Transform pivotObj;
     [SerializeField] GameObject cubePrefab;
     [SerializeField] GameObject weightedCubePrefab;
-    [SerializeField] GameObject fillCubePrefab;
+    [SerializeField] GameObject groundCubePrefab;
     [SerializeField] Material lineMaterial;
     [SerializeField] Transform ground;
     [SerializeField] CameraController cameraController;
@@ -63,13 +63,16 @@ public class BlockAction : MonoBehaviour
         Color.green,
         Color.yellow,
         Color.magenta,
-        new Color(0.678f, 0.847f, 0.902f),
+        new Color(0f, 0.824f, 1),
 
     };
 
     Vector3 weightedBlockOffset;
 
     public FlagsStatus flagStatus;
+
+    int lastGroundLevel = -4;
+    bool isCreating = false;
 
     Vector3 moveInput;
     float nowHighestPoint;
@@ -211,7 +214,7 @@ public class BlockAction : MonoBehaviour
                     {
                         for (int z = (int)minValue.z; z < maxValue.z; z++)
                         {
-                            GameObject go = Instantiate(cubePrefab, new Vector3(x, -4, z), Quaternion.identity);
+                            GameObject go = Instantiate(groundCubePrefab, new Vector3(x, -4, z), Quaternion.identity);
                             go.transform.parent = floor.transform;
                             go.tag = "Ground";
                         }
@@ -251,7 +254,7 @@ public class BlockAction : MonoBehaviour
             }
             if ((flagStatus & FlagsStatus.GenerateBlock) == FlagsStatus.GenerateBlock)
             {
-                if (blockHistory[blockHistory.Length - 1] != -1)
+                if (blockHistory[blockHistory.Length - 1] != -1 && !isCreating)
                 {
                     GenerateBlock(blockHistory[blockHistory.Length - 1]);
                 }
@@ -371,6 +374,17 @@ public class BlockAction : MonoBehaviour
                         if (Mathf.Abs(obj.transform.position.y - fillVertex[1].y) < .2f) Destroy(obj.gameObject);
                         else
                         {
+                            RaycastHit[] hits = Physics.RaycastAll(obj.transform.position + Vector3.up, Vector3.down, 2);
+                            foreach (var hit in hits)
+                            {
+                                if (hit.transform != obj.transform) continue;
+                                if (Vector3.Dot(Vector3.up, hit.normal) > .05f)
+                                {
+                                    Destroy(obj.transform.parent.gameObject);
+                                    break;
+                                }
+                            }
+                            if (obj.transform.parent == null) continue;
                             obj.transform.parent.GetComponent<Rigidbody>().isKinematic = true;
                             obj.GetComponent<MeshRenderer>().material.color = Color.white;
                             obj.tag = "Ground";
@@ -383,18 +397,10 @@ public class BlockAction : MonoBehaviour
                         }
                     }
                 }
-
+                pivotObj.GetComponent<Rigidbody>().isKinematic = true;
                 GameObject newGroundParentObj = new GameObject("Ground");
                 newGroundParentObj.tag = "Ground";
-                for (float x = fillVertex[0].x ; x <= fillVertex[1].x; x++)
-                {
-                    for (float z = fillVertex[0].z ; z <= fillVertex[1].z ; z++)
-                    {
-                        GameObject obj = Instantiate(cubePrefab, new Vector3(x, fillVertex[1].y, z), Quaternion.identity, newGroundParentObj.transform);
-                        obj.GetComponent<MeshRenderer>().material.color = Color.white;
-                        obj.tag = "Ground";
-                    }
-                }
+                StartCoroutine(CreatePlatform(Mathf.RoundToInt(fillVertex[1].y), newGroundParentObj.transform));
                 newGroundParentObj.AddComponent<Rigidbody>().isKinematic = true;
             }
         }
@@ -440,6 +446,58 @@ public class BlockAction : MonoBehaviour
         actionTimer.RecoveryTimer();
         actionTimer.AddPoint(height + 3.5f);
 
+    }
+
+    IEnumerator CreatePlatform(int height, Transform parent)
+    {
+        isCreating = true;
+        for (int i = lastGroundLevel + 1; i <= height + 6; i++)
+        {
+
+            if (i <= height)
+            {
+                GameObject[] objs = GameObject.FindGameObjectsWithTag("Placed");
+                foreach (var obj in objs)
+                    if (Mathf.Abs(obj.transform.position.y - i) < .5f && obj.name.Contains("Cube") && obj != null)
+                        Destroy(obj);
+                objs = GameObject.FindGameObjectsWithTag("Ground");
+                foreach (var obj in objs)
+                    if (Mathf.Abs(obj.transform.position.y - i) < .5f && obj.name.Contains("Cube") && obj != null)
+                        Destroy(obj);
+                for (float x = fillVertex[0].x; x <= fillVertex[1].x; x++)
+                {
+                    for (float z = fillVertex[0].z; z <= fillVertex[1].z; z++)
+                    {
+                        GameObject floor = Instantiate(groundCubePrefab, new Vector3(x, i, z), Quaternion.identity, parent);
+                        floor.GetComponent<MeshRenderer>().material.color = Color.white;
+                        floor.tag = "Ground";
+                    }
+                }
+            }
+            else
+            {
+                GameObject[] objs = GameObject.FindGameObjectsWithTag("Ground");
+                foreach (var obj in objs)
+                {
+                    BlockFade blockFade = obj.GetComponent<BlockFade>();
+                    if (blockFade == null || !obj.name.Contains("Cube")) continue;
+                    if (Mathf.Abs(obj.transform.position.y - i) < .5f)
+                    {
+                        if (true)
+                        {
+                            GameObject floor = Instantiate(groundCubePrefab, blockFade.worldPos, Quaternion.identity, parent);
+                            floor.GetComponent<MeshRenderer>().material.color = Color.white;
+                            floor.tag = "Ground";
+                        }
+                        Destroy(obj);
+                    }
+                }
+            }
+            yield return new WaitForSeconds(.1f);
+        }
+        lastGroundLevel = height;
+        isCreating = false;
+        yield return null;
     }
     #endregion
 
@@ -588,7 +646,7 @@ public class BlockAction : MonoBehaviour
             endValue = transform.eulerAngles.z + 90 * sign;
         }
         else return null;
-        ret = DOTween.To(x => RotateAroundPrc(x, axis), prevValue, endValue, .2f).OnComplete(() => ghostSystem?.UpdateGhostPosition());
+        ret = DOTween.To(x => RotateAroundPrc(x, axis), prevValue, endValue, .1f).OnComplete(() => ghostSystem?.UpdateGhostPosition()).OnUpdate(ghostSystem.UpdateGhostPosition);
 
         return ret;
     }

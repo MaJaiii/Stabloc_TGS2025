@@ -10,7 +10,7 @@ using static UnityEngine.UI.Image;
 
 public class CameraController : MonoBehaviour
 {
-    [SerializeField] Transform camera;
+    [SerializeField] Transform cameraObj;
     [SerializeField] Transform lookAtObj;
     [SerializeField] Transform ground;
     [SerializeField] Transform directionalLight;
@@ -25,9 +25,9 @@ public class CameraController : MonoBehaviour
 
     Tween DoRotateAround(float endValue, float duration)
     {
-        prevValue = camera.eulerAngles.y;
+        prevValue = cameraObj.eulerAngles.y;
 
-        Tween ret = DOTween.To(x => RotateAroundPrc(x), camera.eulerAngles.y, endValue, duration).OnComplete(() => blockAction.flagStatus &= ~FlagsStatus.CameraRotate);
+        Tween ret = DOTween.To(x => RotateAroundPrc(x), cameraObj.eulerAngles.y, endValue, duration).OnComplete(() => blockAction.flagStatus &= ~FlagsStatus.CameraRotate);
 
         return ret;
     }
@@ -37,14 +37,14 @@ public class CameraController : MonoBehaviour
     {
         float delta = value - prevValue;
 
-        camera.RotateAround(new Vector3(startPos.x, camera.position.y, startPos.z), Vector3.up, delta);
+        cameraObj.RotateAround(new Vector3(startPos.x, cameraObj.position.y, startPos.z), Vector3.up, delta);
 
         prevValue = value;
     }
     private void Start()
     {
-        camera.position = points[0].position;
-        camera.rotation = points[0].rotation;
+        cameraObj.position = points[0].position;
+        cameraObj.rotation = points[0].rotation;
     }
 
 
@@ -53,11 +53,11 @@ public class CameraController : MonoBehaviour
 
         if (wideView)
         {
-            camera.DOMove(new Vector3(0, 0, -15), .3f).SetEase(Ease.OutSine);
-            camera.DORotate(Vector3.zero, .3f);
+            cameraObj.DOMove(new Vector3(0, 0, -15), .1f).SetEase(Ease.OutSine);
+            cameraObj.DORotate(Vector3.zero, .1f);
             return;
         }
-        Vector3 angle = camera.rotation.eulerAngles;
+        Vector3 angle = cameraObj.rotation.eulerAngles;
         Vector3 startAngle = angle;
         if (isPos)
         {
@@ -73,13 +73,13 @@ public class CameraController : MonoBehaviour
             angle.y += 90;
         }
 
-        DoRotateAround(angle.y, .5f);
+        DoRotateAround(angle.y, .2f);
 
     }
 
     public void MoveCamera(Vector3 pos)
     {
-        if (pos.y > 3) transform.DOMoveY((pos.y - 3), .3f).SetEase(Ease.OutSine);
+        if (pos.y > 1) transform.DOMoveY((pos.y - 1), .3f).SetEase(Ease.OutSine);
         return;
     }
 
