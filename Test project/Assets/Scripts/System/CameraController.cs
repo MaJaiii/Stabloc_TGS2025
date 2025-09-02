@@ -79,8 +79,15 @@ public class CameraController : MonoBehaviour
 
     public void MoveCamera(Vector3 pos)
     {
-        if (pos.y > 1) transform.DOMoveY((pos.y - 1), .3f).SetEase(Ease.OutSine);
+        if (pos.y > 1 && pos.y > transform.position.y) transform.DOMoveY((pos.y - 1), .3f).SetEase(Ease.OutSine);
         return;
+    }
+
+    public void DropMotionCamera()
+    {
+        return;
+        float tempY = transform.position.y;
+        transform.DOMoveY(tempY - .2f, .04f).OnComplete(() => transform.DOMoveY(tempY, .4f));
     }
 
 }

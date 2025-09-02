@@ -57,7 +57,7 @@ public class BlockAction : MonoBehaviour
     List<GameObject> rootObj = new();
     List<Vector3> rootRotation = new();
     List<float> nowAngle = new();
-    List<Color> PentacubeColors = new() {
+    public List<Color> PentacubeColors = new() {
         Color.white,
         Color.red,
         Color.green,
@@ -82,7 +82,7 @@ public class BlockAction : MonoBehaviour
     int blockCount;
     float timer;
     public int[] blockHistory = new int[3] { -1, -1, -1 };
-    public Color[] colorHistory = new Color[3];
+    public int[] colorHistory = new int[12];
     float moveInputCooldown;
     float rotateInputCooldown;
 
@@ -125,6 +125,8 @@ public class BlockAction : MonoBehaviour
         blockCount = 0;
         totalPCMFrequency = bgmSource.clip.frequency * (int)bgmSource.clip.length;
 
+        lastGroundLevel = -4;
+
         timer = 0;
     }
 
@@ -154,10 +156,15 @@ public class BlockAction : MonoBehaviour
         if ((flagStatus & FlagsStatus.PressDownButton) == FlagsStatus.PressDownButton)
             rb.MovePosition(rb.position + Vector3.down * dropSpeed * Time.deltaTime);
 
+        Vector3 pos = rb.position;
+        pos.x = Mathf.RoundToInt(pos.x); pos.z = Mathf.RoundToInt(pos.z);
+        rb.position = pos;
+
         if (pivotObj == null)
         {
             var genPos = GetHighestPoint();
             genPos.y += 5;
+            genPos.x = origin.x; genPos.z = origin.z;
             this.transform.position = genPos ;
         }
     }
@@ -201,6 +208,7 @@ public class BlockAction : MonoBehaviour
                         break;
                     }
                 }
+                rb.constraints = RigidbodyConstraints.FreezePositionX & RigidbodyConstraints.FreezePositionZ & RigidbodyConstraints.FreezeRotation;
 
                 if ((flagStatus & FlagsStatus.FirstDrop) == FlagsStatus.FirstDrop)
                 {
@@ -221,7 +229,7 @@ public class BlockAction : MonoBehaviour
                     }
                     origin = pivotObj.position;
                     GameStatus.fieldOrigin.x = Mathf.RoundToInt(origin.x); GameStatus.fieldOrigin.z = Mathf.RoundToInt(origin.z); GameStatus.fieldOrigin.y = Mathf.RoundToInt(origin.y);
-                    cameraController.transform.DOMove(new Vector3(pivotObj.position.x, 0, pivotObj.position.z), .2f);
+                    cameraController.transform.DOMove(new Vector3(pivotObj.position.x, 3, pivotObj.position.z), .2f);
                     cameraController.startPos = pivotObj.position;
                     gameManager.ChangeGameState(GAME_STATE.GAME_INGAME);
                     floor.tag = "Ground";
@@ -229,10 +237,10 @@ public class BlockAction : MonoBehaviour
                 }
                 else
                 {
-                    rb.DOMoveY(rb.position.y - 3, .05f).SetEase(Ease.InSine);
+                    rb.transform.DOMoveY(rb.position.y - 3, .05f).SetEase(Ease.InSine);
                     Vector3 ghostPos = ghostSystem.ghostBlock.position;
                     yield return new WaitForSeconds(.05f);
-                    rb.position = ghostPos + Vector3.up * .51f;
+                    rb.transform.position = ghostPos + Vector3.up * .5f;
                 }
 
                 flagStatus |= FlagsStatus.PressDownButton;
@@ -308,6 +316,7 @@ public class BlockAction : MonoBehaviour
 
         actionTimer.blockCount++;
 
+
         pivotObj.tag = "Placed";
         pivotObj.parent = null;
         pivotObj.GetComponent<BlockColor>().heightWhenSet = pivotObj.transform.position.y;
@@ -317,7 +326,6 @@ public class BlockAction : MonoBehaviour
         for (int i = 0; i < pivotObj.childCount; i++)
         {
             Transform child = pivotObj.GetChild(i);
-            child.tag = "Placed";
             child.GetComponent<BoxCollider>().enabled = true;
             child.GetComponent<MeshRenderer>().enabled = true;
             child.GetChild(0).GetComponent<MeshRenderer>().enabled = false;
@@ -330,14 +338,14 @@ public class BlockAction : MonoBehaviour
                     particle.transform.position = child.GetChild(1).transform.position - new Vector3(0, .5f, 0);
 
                     if ((Physics.Raycast(child.position + Vector3.down * .3f, Vector3.down, out RaycastHit hit, 1f) &&
-                        (hit.collider.CompareTag("Ground") || hit.collider.CompareTag("Placed")))||
-                        particle.gameObject.name.Contains("Box"))
+                        (hit.collider.CompareTag("Ground") || hit.collider.CompareTag("Placed"))||
+                        particle.gameObject.name.Contains("Box")))
                     {
                         Gradient gradient = new Gradient();
                         gradient.SetKeys(new GradientColorKey[]
                         {
-                        new GradientColorKey(colorHistory[colorHistory.Length - 1], 0f),
-                        new GradientColorKey(colorHistory[colorHistory.Length - 1], 1f)
+                        new GradientColorKey(PentacubeColors[colorHistory[colorHistory.Length - 1]], 0f),
+                        new GradientColorKey(PentacubeColors[colorHistory[colorHistory.Length - 1]], 1f)
                         },
                         new GradientAlphaKey[]
                         {
@@ -353,22 +361,24 @@ public class BlockAction : MonoBehaviour
                     }
                 }
             }
+            child.tag = "Placed";
         }
 
         audioSource.clip = audioClips[0];
         audioSource.time = .5f;
         audioSource.Play();
         Rigidbody toRb = pivotObj.gameObject.AddComponent<Rigidbody>();
-
+        cameraController.DropMotionCamera();
         if (fillVertex[0] != fillVertex[1])
         {
             Vector3 dir = fillVertex[1] - fillVertex[0];
-            StartCoroutine(VibrateGamepad(.8f, .8f, 0.1f));
+            StartCoroutine(VibrateGamepad(.8f, .8f, 0.25f));
             if (Mathf.Abs(dir.y) < .2f)
             {
                 GameObject[] placedObjs = GameObject.FindGameObjectsWithTag("Placed");
                 foreach (var obj in placedObjs)
                 {
+                    if (obj.GetComponent<Rigidbody>() != null) obj.GetComponent<Rigidbody>().isKinematic = true;
                     if (obj.name.Contains("Cube") && obj != null && !obj.transform.parent.name.Contains("ReleasePt"))
                     {
                         if (Mathf.Abs(obj.transform.position.y - fillVertex[1].y) < .2f) Destroy(obj.gameObject);
@@ -445,13 +455,13 @@ public class BlockAction : MonoBehaviour
 
         actionTimer.RecoveryTimer();
         actionTimer.AddPoint(height + 3.5f);
-
+        rb.constraints = RigidbodyConstraints.None;
     }
 
     IEnumerator CreatePlatform(int height, Transform parent)
     {
         isCreating = true;
-        for (int i = lastGroundLevel + 1; i <= height + 6; i++)
+        for (int i = height + 6; i > lastGroundLevel; i--)
         {
 
             if (i <= height)
@@ -473,10 +483,12 @@ public class BlockAction : MonoBehaviour
                         floor.tag = "Ground";
                     }
                 }
+                yield return new WaitForSeconds(.05f);
             }
             else
             {
                 GameObject[] objs = GameObject.FindGameObjectsWithTag("Ground");
+                if (objs.Length == 0) continue;
                 foreach (var obj in objs)
                 {
                     BlockFade blockFade = obj.GetComponent<BlockFade>();
@@ -493,7 +505,7 @@ public class BlockAction : MonoBehaviour
                     }
                 }
             }
-            yield return new WaitForSeconds(.1f);
+
         }
         lastGroundLevel = height;
         isCreating = false;
@@ -586,13 +598,13 @@ public class BlockAction : MonoBehaviour
         if ((flagStatus & FlagsStatus.Collapse) == FlagsStatus.Collapse || (flagStatus & FlagsStatus.PressDownButton) == FlagsStatus.PressDownButton || rotateInputCooldown > 0 || context.ReadValue<Vector2>().magnitude < .5f) return;
 
         Vector2 readValue = context.ReadValue<Vector2>();
-        rotateInput = readValue;
+        if (readValue.magnitude <= .5f) return;
         Vector3 axis = Vector3.zero;
-        if (Mathf.Abs(readValue.x) >= .5f && Mathf.Abs(readValue.y) <= .2f) //horizontal
+        if (Mathf.Abs(readValue.y) <= .25f) //horizontal
         {
             axis.y = 1 ;
         }
-        else if (Mathf.Abs(readValue.x) >= .15f && Mathf.Abs(readValue.y) >= .25f)
+        else 
         {
             switch (cameraController.cameraIndex)
             {
@@ -707,10 +719,50 @@ public class BlockAction : MonoBehaviour
         }
     }
 
+    int[] GenerateColor(int[] array)
+    {
+        int[] count = new int[4] { 3, 3, 3, 3 };
+        int[] tempOrder;
+        int fishStart = 0;
+        if (array[0] == 0)
+        {
+            tempOrder = new int[12] { 2, 3, 4, 5, 2, 3, 4, 5, 2, 3, 4, 5 };
+        }
+        else
+        {
+            tempOrder = new int[12];
+            for (int i = tempOrder.Length - 1; i > 0; i--)
+            {
+                if (array[i] != 0)
+                {
+                    tempOrder[i] = array[i];
+                    count[array[i - 2]]--;
+                    fishStart++;
+                    continue;
+                }
+                for (int j = 0; j < count.Length; j++)
+                {
+                    if (count[j] <= 0) continue;
+                    tempOrder[i] = j + 2;
+                    count[j]--;
+                }
+            }
+        }
+
+        for (int i = tempOrder.Length - fishStart - 1; i > 0; i--)
+        {
+            int temp = tempOrder[i];
+            int r = UnityEngine.Random.Range(0, i + 1);
+            tempOrder[i] = tempOrder[r];
+            tempOrder[r] = temp;
+        }
+        return tempOrder;
+    }
+
     void HandleNewBlockSpawn()
     {
         timer += Time.deltaTime;
-        if (timer > 0.75f && (flagStatus & FlagsStatus.Collapse) != FlagsStatus.Collapse)
+        if (timer > 0.75f && (flagStatus & FlagsStatus.Collapse) != FlagsStatus.Collapse && (flagStatus & FlagsStatus.GenerateBlock) != FlagsStatus.GenerateBlock)
         {
             int tempIndex = 0;
             placedBlockCount = blockCount;
@@ -742,17 +794,22 @@ public class BlockAction : MonoBehaviour
                 }
             }
 
-            for (int i = blockHistory.Length - 1; i > 0; i--)
+            for (int i = colorHistory.Length - 1; i > 0; i--)
             {
-                blockHistory[i] = blockHistory[i - 1];
                 colorHistory[i] = colorHistory[i - 1];
+                if (i < blockHistory.Length) blockHistory[i] = blockHistory[i - 1];
             }
 
-            blockHistory[0] = tempIndex; colorHistory[0] = PentacubeColors[colorCount];
+
+            blockHistory[0] = tempIndex; colorHistory[0] = 0;
             timer = 0;
-            flagStatus |= FlagsStatus.GenerateBlock;
+            if (blockHistory[blockHistory.Length - 1] != -1) flagStatus |= FlagsStatus.GenerateBlock;
         }
+        if (colorHistory[colorHistory.Length - blockHistory.Length] == 0) colorHistory = GenerateColor(colorHistory);
     }
+
+
+
 
     public void GenerateBlock(int index)
     {
@@ -769,7 +826,8 @@ public class BlockAction : MonoBehaviour
         }
         Block3DType blockType = (Block3DType)index;
         Vector3 genPos = cameraController.transform.position;
-        genPos.y = GetHighestPoint(true).y;
+        if (genPos.y < lastGroundLevel + 8) genPos.y = lastGroundLevel + 8;
+        else genPos.y = GetHighestPoint(true).y;
         cameraController.MoveCamera(genPos);        
         genPos.y += 5;
 
@@ -783,12 +841,12 @@ public class BlockAction : MonoBehaviour
         pivotObj.localPosition = Vector3.zero;
         BlockColor pivotColor = pivotObj.AddComponent<BlockColor>();
         pivotColor.blockAction = this;
-        pivotColor.blockColor = colorHistory[2];
+        pivotColor.blockColor = PentacubeColors[colorHistory[colorHistory.Length - 1]];
         int cubeCount = 0;
         foreach (Vector3 offset in PentacubeShapes.Shapes[blockType])
         {
             GameObject obj;
-            if (offset == Vector3.zero)
+            if (offset == Vector3.zero && blockCount % 3 != 0)
             {
                 obj = Instantiate(weightedCubePrefab, transform.position + offset, Quaternion.identity, pivotObj);
                 weightedBlockOffset = offset;
@@ -799,7 +857,7 @@ public class BlockAction : MonoBehaviour
             }
             
             obj.GetComponent<BoxCollider>().enabled = false;
-            obj.GetComponent<MeshRenderer>().material.color = colorHistory[2];
+            obj.GetComponent<MeshRenderer>().material.color = PentacubeColors[colorHistory[colorHistory.Length - 1]];
             obj.GetComponent<MeshRenderer>().enabled = true;
             cubeCount++;
         }
@@ -896,8 +954,8 @@ public class BlockAction : MonoBehaviour
             else yield return new WaitForEndOfFrame();
             Gamepad.current.SetMotorSpeeds(0, 0);
         }
-
     }
+
 }
 
 [Flags]

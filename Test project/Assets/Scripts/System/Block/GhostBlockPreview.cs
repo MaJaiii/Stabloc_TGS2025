@@ -92,20 +92,22 @@ public class GhostBlockPreview : MonoBehaviour
         Color tempCol = recentColor;
         foreach (Transform child in blockAction.pivotObj)
         {
-            Vector3 origin = child.position + Vector3.up * 10000f;
-            Ray ray = new Ray(child.position, Vector3.down);
-            RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity);
-            foreach (var hit in hits)
+            Vector3[] offsets = new Vector3[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right };
+            foreach (var offset in offsets)
             {
-                if (hit.collider.gameObject == child.gameObject) continue;
-                float drop = child.position.y - hit.point.y;
-                if (drop < minDrop)
+                Ray ray = new Ray(child.position + offset * .4f, Vector3.down);
+                RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity);
+                foreach (var hit in hits)
                 {
-                    minDrop = drop;
-
-                    tempCol = hit.collider.CompareTag("GameOver") ? Color.blue : recentColor;
+                    if (hit.collider.gameObject == child.gameObject) continue;
+                    float drop = child.position.y - hit.point.y;
+                    if (drop < minDrop)
+                    {
+                        minDrop = drop;
+                    }
                 }
             }
+
         }
 
         if (minDrop != Mathf.Infinity)

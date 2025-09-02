@@ -58,11 +58,11 @@ public class ActionTimer : MonoBehaviour
             }
         }
         else Gamepad.current?.SetMotorSpeeds(0, 0);
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < overallTimer.Length; i++)
         {
             overallTimer[i].fillAmount = Mathf.Max(0, Mathf.Min(6, timer)) / 6;
             bonusTimer[i].fillAmount = Mathf.Max(0, Mathf.Min(maxTime, timer)) / maxTime;
-            bonusTimer[i].color = blockAction.colorHistory[blockAction.colorHistory.Length - 1];
+            bonusTimer[i].color = blockAction.PentacubeColors[blockAction.colorHistory[blockAction.colorHistory.Length - 1]];
         }
         blockCountText.text = $"{blockCount} blocks placed";
     }

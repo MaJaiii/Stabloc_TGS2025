@@ -41,7 +41,7 @@ public class NextBlockPreview : MonoBehaviour
         if (previewBlocks[order] != null) Destroy(previewBlocks[order]);
         previewBlocks[order] = new GameObject($"Preview Block ({order})");
         previewBlocks[order].transform.parent = previewBlocksPositions[order];
-
+        Color color = blockAction.PentacubeColors[blockAction.colorHistory[blockAction.colorHistory.Length - blockAction.blockHistory.Length + order]];
         Vector3 maxEdge = Vector3.zero;
         Vector3 minEdge = Vector3.zero;
         foreach (Vector3 offset in PentacubeShapes.Shapes[(Block3DType)blockType])
@@ -54,10 +54,10 @@ public class NextBlockPreview : MonoBehaviour
             if (offset.z > maxEdge.z) maxEdge.z = offset.z;
             else if (offset.z < minEdge.z) minEdge.z = offset.z;
             obj.GetComponent<BoxCollider>().enabled = false;
-            obj.GetComponent<MeshRenderer>().material.color = blockAction.colorHistory[order];
+            obj.GetComponent<MeshRenderer>().material.color = color;
         }
-        previewUI[order].color = blockAction.colorHistory[order];
-        if (order >= 1) previewTextFrame[order - 1].color = blockAction.colorHistory[order];
+        previewUI[order].color = color;
+        if (order >= 1) previewTextFrame[order - 1].color = color;
         previewBlocks[order].transform.position = -(maxEdge + minEdge) / 2;
     }
 }
