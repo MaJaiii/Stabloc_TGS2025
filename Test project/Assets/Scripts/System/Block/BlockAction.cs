@@ -17,6 +17,7 @@ public class BlockAction : MonoBehaviour
     [Header("System")]
     [SerializeField] GameManager gameManager;
     [SerializeField] GameOver gameOver;
+    [SerializeField] GameObject gameOverTrigger;
     [SerializeField] Vector2 rotateInput;
 
     [Header("Block Settings")]
@@ -31,8 +32,6 @@ public class BlockAction : MonoBehaviour
     [SerializeField] TextMeshProUGUI text;
     [SerializeField, Range(1, 18)] public int blockIndex;
     [SerializeField] NextBlockPreview nextBlockPreview;
-
-
 
     [Header("Audio")]
     [SerializeField]
@@ -194,6 +193,7 @@ public class BlockAction : MonoBehaviour
             CheckBlockConnectability();
         else
             do { HandleNewBlockSpawn(); } while (blockHistory[2] == -1);
+
         if (nowFreq != prevFreq)
         {
             prevFreq = nowFreq;
@@ -369,6 +369,7 @@ public class BlockAction : MonoBehaviour
                       
                         particle.Play();
                     }
+                    particle.transform.parent = null;
                 }
             }
             child.tag = "Placed";
@@ -830,16 +831,27 @@ public class BlockAction : MonoBehaviour
             fillVertex[i] = Vector3.zero;
         }
 
-        for (int i = 0;  i < blockHistory.Length; i++)
+
+        for (int i = 0; i < blockHistory.Length; i++)
         {
             nextBlockPreview.GeneratePreviewBlock(i, blockHistory[i]);
         }
         Block3DType blockType = (Block3DType)index;
-        Vector3 genPos = cameraController.transform.position;
-        if (genPos.y < lastGroundLevel + 8) genPos.y = lastGroundLevel + 8;
-        else genPos.y = GetHighestPoint(true).y;
+        Vector3 genPos = GetHighestPoint(true);
+        if (genPos.y < lastGroundLevel + 8)
+        {
+            genPos = cameraController.transform.position;
+            genPos.y = lastGroundLevel + 8;
+            var zonePos = gameOverTrigger.transform.position;
+            zonePos.y = genPos.y - 12;
+            gameOverTrigger.transform.position = zonePos;
+        }
+        else
+        {
+            genPos.x = origin.x; genPos.z = origin.z; genPos.y += 2;
+        }
         cameraController.MoveCamera(genPos);        
-        genPos.y += 5;
+        genPos.y += 8;
 
 
         transform.position = RoundOffVec3(genPos);

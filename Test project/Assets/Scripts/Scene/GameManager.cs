@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -9,6 +10,8 @@ public class GameManager : MonoBehaviour
 {
     [SerializeField]
     GAME_STATE nowGameState = GAME_STATE.GAME_TITLE;
+    [SerializeField]
+    AudioSource gameAudioSource;
 
     [Header("Title")]
     [SerializeField, Tooltip("Ground parent object")] GameObject groundObj;
@@ -28,6 +31,7 @@ public class GameManager : MonoBehaviour
         Application.targetFrameRate = 120;
         QualitySettings.vSyncCount = 0;
     }
+
 
     private void OnApplicationQuit()
     {
@@ -54,6 +58,8 @@ public class GameManager : MonoBehaviour
         ExecuteStateAction();
         cmdCount = 0;
         previewUI.SetActive(false);
+
+        gameAudioSource.volume = 0.0005f * InGameSetting.masterVolume;
     }
 
     void Update()

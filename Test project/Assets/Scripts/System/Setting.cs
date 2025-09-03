@@ -9,7 +9,7 @@ public class Setting : MonoBehaviour
     {
         
         if (InGameSetting.swayLimit == 0) InGameSetting.swayLimit = 10;
-        if (InGameSetting.masterVolume <= 0 || InGameSetting.masterVolume > 30) InGameSetting.masterVolume = 10;
+        if (InGameSetting.masterVolume <= 0) InGameSetting.masterVolume = 10;   
     }
 
 }

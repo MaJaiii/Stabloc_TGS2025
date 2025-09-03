@@ -30,8 +30,9 @@ public class Button_VolModi : MonoBehaviour
             if (masterVolume > 0)
             {
                 consoleText.color = Color.white;
-                consoleText.text = "Master Volume adjustment... Success! Master volume is now set to " + masterVolume;
                 InGameSetting.masterVolume = masterVolume;
+                consoleText.text = "Master Volume adjustment... Success! Master volume is now set to " + InGameSetting.masterVolume;
+
                 audioSource.volume = 0.0005f * InGameSetting.masterVolume;
                 audioSource.Play();
             }

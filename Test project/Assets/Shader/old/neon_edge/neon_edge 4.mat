@@ -29,7 +29,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _EmissionStrength: 5.2
+    - _EmissionStrength: 2.7
     - _EmissionStrength1: 1
     - _EmissionStrength2: 1
     m_Colors:

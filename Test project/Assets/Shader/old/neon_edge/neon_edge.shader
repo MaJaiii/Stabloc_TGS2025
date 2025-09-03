@@ -4,7 +4,7 @@ Shader "Custom/NeonTextureShader"
 	{
 		_MainTex ("Main Texture", 2D) = "white" {}
 		_BaseColor ("_BaseColor", Color) = (0,1,0,1) // —Î
-		_EmissionStrength ("Emission Strength", Range(0,20)) = 2
+		_EmissionStrength ("Emission Strength", Range(0,200)) = 2
 	}
 
 	SubShader
