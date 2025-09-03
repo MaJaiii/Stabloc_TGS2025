@@ -54,7 +54,8 @@ public class NextBlockPreview : MonoBehaviour
             if (offset.z > maxEdge.z) maxEdge.z = offset.z;
             else if (offset.z < minEdge.z) minEdge.z = offset.z;
             obj.GetComponent<BoxCollider>().enabled = false;
-            obj.GetComponent<MeshRenderer>().material.color = color;
+            // Åö
+            obj.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", color);
         }
         previewUI[order].color = color;
         if (order >= 1) previewTextFrame[order - 1].color = color;

@@ -67,6 +67,16 @@ public class BlockAction : MonoBehaviour
 
     };
 
+    // ★
+    List<Color> PatternGlowColors = new() {
+    new Color(0.5f, 1.0f, 0.3f), // Color.white に対応
+    new Color(0.5f, 1.0f, 0.3f), // Color.redに対応
+    new Color(0.5f, 1.0f, 0.3f),   // Color.green に対応
+    new Color(1f, 0.890f, 0.451f),  // Color.yellow に対応
+    new Color(1f, 0.486f, 1f),  // Color.magenta に対応
+    new Color(0.52f, 0.976f, 1f), // new Color(0f, 0.824f, 1) に対応
+    };
+
     Vector3 weightedBlockOffset;
 
     public FlagsStatus flagStatus;
@@ -855,9 +865,28 @@ public class BlockAction : MonoBehaviour
             {
                 obj = Instantiate(cubePrefab, transform.position + offset, Quaternion.identity, pivotObj);
             }
-            
+
+            // ★
+            // BlockGlowControllerをobjに追加
+            BlockGlowController glowController = obj.AddComponent<BlockGlowController>();
+
+            // オフセットを色に基づいて計算
+            float colorOffset = GetBlinkOffsetForColor(PentacubeColors[colorHistory[colorHistory.Length - 1]]);
+
+            // マテリアルのプロパティを個別に設定
+            obj.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", PentacubeColors[colorHistory[colorHistory.Length - 1]]);
+            int colorIndex = PentacubeColors.IndexOf(PentacubeColors[colorHistory[colorHistory.Length - 1]]);
+            if (colorIndex >= 0 && colorIndex < PatternGlowColors.Count)
+            {
+                Color patternColor = PatternGlowColors[colorIndex];
+                obj.GetComponent<MeshRenderer>().material.SetColor("_GlowColor", patternColor);
+            }
+
+            // glowControllerのメソッドを呼び出し、オフセット値を渡す
+            glowController.SetBlinkOffset(colorOffset);
+
             obj.GetComponent<BoxCollider>().enabled = false;
-            obj.GetComponent<MeshRenderer>().material.color = PentacubeColors[colorHistory[colorHistory.Length - 1]];
+            // --------------------------------
             obj.GetComponent<MeshRenderer>().enabled = true;
             cubeCount++;
         }
@@ -875,6 +904,17 @@ public class BlockAction : MonoBehaviour
         flagStatus &= ~FlagsStatus.Connectable;
         flagStatus &= ~FlagsStatus.GenerateBlock;
         if (ic != null) ic.Block.Enable();
+    }
+
+    // ★
+    // 色ごとに点滅のタイミングを変更
+    private float GetBlinkOffsetForColor(Color color)
+    {
+        if (color == Color.green) return 0f;
+        if (color == Color.yellow) return 15f;
+        if (color == Color.magenta) return 27f;
+        if (color == new Color(0.0f, 0.947f, 1.0f)) return 35f;
+        return 6.0f; // デフォルト値
     }
 
     Vector3 RoundOffVec3(Vector3 value)
