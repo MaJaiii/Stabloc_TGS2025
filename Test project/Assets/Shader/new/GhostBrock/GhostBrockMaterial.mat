@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: neon_edge 4
-  m_Shader: {fileID: 4800000, guid: 4c6f72c0348e8e846af14ca914e25c0e, type: 3}
+  m_Name: GhostBrockMaterial
+  m_Shader: {fileID: 4800000, guid: 022682bb6df8aba49bbc7ad0c5e01624, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -24,16 +24,23 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: ed162662c8806e94da90101246e995c3, type: 3}
+        m_Texture: {fileID: 2800000, guid: e621585a758739846a5973ed1a237bb5, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _EmissionStrength: 5.2
-    - _EmissionStrength1: 1
-    - _EmissionStrength2: 1
+    - _EdgeShine: 20.5
+    - _Float: 5.5
+    - _Intensity: 0.48
+    - _Range: 0.3
+    - _SurfaceDarkness: 0.169
+    - _TextureDensity: 0.5
+    - _Transparency: 0.95
+    - _transparency: 0.95
     m_Colors:
-    - _BackgroundColor: {r: 1, g: 1, b: 1, a: 1}
-    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _Color1: {r: 1, g: 1, b: 0, a: 1}
+    - _Color2: {r: 1, g: 0, b: 0, a: 1}
+    - _EdgeColor: {r: 1, g: 0, b: 0, a: 1}
+    - _SurfaceColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

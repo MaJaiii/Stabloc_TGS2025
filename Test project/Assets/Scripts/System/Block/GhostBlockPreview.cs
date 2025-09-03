@@ -174,12 +174,18 @@ public class GhostBlockPreview : MonoBehaviour
                         tempClearObjs.Clear();
                     }
                     tempCol.a = .9f;
+                    child.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", tempCol);
                 }
                 else
                 {
                     tempCol = recentColor;
                     tempCol.a = .8f;
-                    child.GetComponent<MeshRenderer>().material.color = tempCol;
+
+                    // ’Ç‰Á=========================================================================
+                    //child.GetComponent<MeshRenderer>().material.color = tempCol;
+                    child.GetComponent<MeshRenderer>().material.SetColor("_SurfaceColor", tempCol);
+                    child.GetComponent<MeshRenderer>().material.SetColor("_EdgeColor", tempCol);
+                    // =============================================================================
                 }
 
             }
