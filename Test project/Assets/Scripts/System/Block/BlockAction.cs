@@ -737,9 +737,16 @@ public class BlockAction : MonoBehaviour
         if (array[0] == 0)
         {
             tempOrder = new int[12] { 2, 3, 4, 5, 2, 3, 4, 5, 2, 3, 4, 5 };
+            if (!InGameSetting.isColorRandomize) return tempOrder;
         }
         else
         {
+            if (!InGameSetting.isColorRandomize)
+            {
+                if (array[11] == 5) tempOrder = new int[12] { 4, 5, 2, 3, 4, 5, 2, 3, 4, 5, 2, 3 };
+                else tempOrder = new int[12] { 2, 3, 4, 5, 2, 3, 4, 5, 2, 3, 4, 5 };
+                return tempOrder;
+            }
             tempOrder = new int[12];
             for (int i = tempOrder.Length - 1; i > 0; i--)
             {
@@ -867,7 +874,7 @@ public class BlockAction : MonoBehaviour
         foreach (Vector3 offset in PentacubeShapes.Shapes[blockType])
         {
             GameObject obj;
-            if (offset == Vector3.zero && blockCount % 3 != 0)
+            if (offset == Vector3.zero && blockCount % InGameSetting.coreFrequency[0] >= InGameSetting.coreFrequency[1])
             {
                 obj = Instantiate(weightedCubePrefab, transform.position + offset, Quaternion.identity, pivotObj);
                 weightedBlockOffset = offset;

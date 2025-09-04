@@ -17,6 +17,50 @@ public class CheckCore : MonoBehaviour
         pos.y = Mathf.RoundToInt(pos.y);
     }
 
+    void ShowCorner()
+    {
+        pos = transform.position;
+        pos.x = Mathf.RoundToInt(pos.x);
+        pos.z = Mathf.RoundToInt(pos.z);
+        pos.y = Mathf.RoundToInt(pos.y);
+
+        Ray rayFromThisToRight = new Ray(pos, Vector3.right);       //x+
+        Ray rayFromThisToLeft = new Ray(pos, Vector3.left);         //x-
+        Ray rayFromThisToUp = new Ray(pos, Vector3.up);             //y+
+        Ray rayFromThisToDown = new Ray(pos, Vector3.down);         //y-
+        Ray rayFromThisToForward = new Ray(pos, Vector3.forward);   //z+
+        Ray rayFromThisToBack = new Ray(pos, Vector3.back);         //z-
+
+        bool[] isShow = {true, true, true};
+
+        if (pos.x == origins.x && pos.z == origins.y)       //Position0 (-2,-2)
+        {
+            RaycastHit[] hit0 = Physics.RaycastAll(rayFromThisToForward, 6);
+            foreach (RaycastHit hit in hit0)
+            {
+                if (hit.collider.GetComponent<BlockFade>()?.worldPos.z != origins.w) continue;      //Check if the hit object is block
+                if (hit.collider.GetComponent<CheckCore>() == null) return;                         //Check if there is already a non-core block
+                isShow[0] = false;
+            }
+            hit0 = Physics.RaycastAll(rayFromThisToRight, 6);
+            foreach (RaycastHit hit in hit0)
+            {
+                if (hit.collider.GetComponent<BlockFade>()?.worldPos.x != origins.z) continue;      //Check if the hit object is block
+                if (hit.collider.GetComponent<CheckCore>() == null) return;                         //Check if there is already a non-core block
+                isShow[1] = false;
+            }
+            Vector3 tempPos = pos;
+            tempPos.x = origins.z;
+            hit0 = Physics.RaycastAll(tempPos, Vector3.forward, 6);
+            foreach (RaycastHit hit in hit0)
+            {
+                if (hit.collider.GetComponent<BlockFade>()?.worldPos.x != origins.z) continue;      //Check if the hit object is block
+                if (hit.collider.GetComponent<CheckCore>() == null) return;                         //Check if there is already a non-core block
+                isShow[2] = false;
+            }
+        }
+    }
+
     public Vector3[] CheckFill()
     {
         pos = transform.position;

@@ -30,6 +30,16 @@ public class GameManager : MonoBehaviour
     {
         Application.targetFrameRate = 120;
         QualitySettings.vSyncCount = 0;
+
+        InGameSetting.coreFrequency = new int[2];
+
+        InGameSetting.hiScore = PlayerPrefs.GetFloat("hiScore");
+        InGameSetting.masterVolume = PlayerPrefs.GetInt("masterVolume");
+        InGameSetting.timeLimitation = PlayerPrefs.GetInt("timeLimitation");
+        InGameSetting.isColorRandomize = PlayerPrefs.GetInt("isColorRandomize") == 1;
+        InGameSetting.coreFrequency[0] = PlayerPrefs.GetInt("coreFrequency[0]");
+        InGameSetting.coreFrequency[1] = PlayerPrefs.GetInt("coreFrequency[1]");
+        InGameSetting.isCursorVisible = PlayerPrefs.GetInt("isCursorVisible") == 1;
     }
 
 
