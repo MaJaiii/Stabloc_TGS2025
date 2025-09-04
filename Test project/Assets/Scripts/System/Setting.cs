@@ -7,7 +7,9 @@ public class Setting : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        if (InGameSetting.masterVolume <= 0) InGameSetting.masterVolume = 10;   
+        if (InGameSetting.masterVolume <= 0) InGameSetting.masterVolume = 10;
+        if (InGameSetting.coreFrequency[0] == 0) InGameSetting.coreFrequency[0] = 4;
+        if (InGameSetting.coreFrequency[1] > InGameSetting.coreFrequency[0]) InGameSetting.coreFrequency[1] = 3;
     }
 
 }

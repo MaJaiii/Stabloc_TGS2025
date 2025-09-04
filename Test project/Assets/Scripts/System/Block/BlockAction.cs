@@ -205,6 +205,7 @@ public class BlockAction : MonoBehaviour
 
     IEnumerator Execution()
     {
+        Debug.Log("1");
         if ((flagStatus & FlagsStatus.Drop) == FlagsStatus.Drop)
         {
             flagStatus &= ~FlagsStatus.Drop;
@@ -272,6 +273,7 @@ public class BlockAction : MonoBehaviour
             }
             if ((flagStatus & FlagsStatus.GenerateBlock) == FlagsStatus.GenerateBlock)
             {
+                Debug.Log("2");
                 if (blockHistory[blockHistory.Length - 1] != -1 && !isCreating)
                 {
                     GenerateBlock(blockHistory[blockHistory.Length - 1]);
@@ -857,7 +859,7 @@ public class BlockAction : MonoBehaviour
             genPos.x = origin.x; genPos.z = origin.z; genPos.y += 2;
         }
         cameraController.MoveCamera(genPos);        
-        genPos.y += 8;
+        genPos.y += 08;
 
 
         transform.position = RoundOffVec3(genPos);
