@@ -8,9 +8,12 @@ public class ScoreSystem : MonoBehaviour
     [SerializeField] BlockAction blockAction;
     [SerializeField] TextMeshProUGUI nowScore;
     int prevScore;
+    int tempBreak = 0;
+    public float tempBreakduration;
     public int score;
     bool isCountUp;
     Sequence sequence;
+    public int borderScore = 300;
 
     ActionTimer actionTimer;
 
@@ -27,6 +30,10 @@ public class ScoreSystem : MonoBehaviour
     {
         prevScore = score;
         score += gain;
+        if (Mathf.FloorToInt(prevScore / borderScore) < Mathf.FloorToInt(score / borderScore))
+        {
+            tempBreak = score - score % borderScore;
+        }
         if (isCountUp) sequence.Kill(true);
         CountUpAnim();
     }
@@ -42,6 +49,12 @@ public class ScoreSystem : MonoBehaviour
     void CountUpAnim()
     {
         isCountUp = true;
-        sequence = DOTween.Sequence().Append(DOTween.To(() => prevScore, num => prevScore = num, score, .5f)).AppendInterval(.1f).AppendCallback(() => isCountUp = false);
+        if (tempBreak == 0)
+        {
+            sequence = DOTween.Sequence().Append(DOTween.To(() => prevScore, num => prevScore = num, score, .5f)).AppendInterval(.1f).AppendCallback(() => isCountUp = false);
+            return;
+        }
+        sequence = DOTween.Sequence().Append(DOTween.To(() => prevScore, num => prevScore = num, tempBreak, .5f)).AppendInterval(.1f).AppendCallback(() => DOTween.Sequence().Append(DOTween.To(() => tempBreak, num => tempBreak = num, score, .5f)).AppendInterval(.1f).AppendCallback(() => isCountUp = false));
+        tempBreak = 0;
     }
 }

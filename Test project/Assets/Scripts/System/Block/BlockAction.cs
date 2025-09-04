@@ -886,7 +886,7 @@ public class BlockAction : MonoBehaviour
 
             // ★
             // BlockGlowControllerをobjに追加
-            BlockGlowController glowController = obj.AddComponent<BlockGlowController>();
+            //BlockGlowController glowController = obj.AddComponent<BlockGlowController>();
 
             // オフセットを色に基づいて計算
             float colorOffset = GetBlinkOffsetForColor(PentacubeColors[colorHistory[colorHistory.Length - 1]]);
@@ -901,7 +901,7 @@ public class BlockAction : MonoBehaviour
             }
 
             // glowControllerのメソッドを呼び出し、オフセット値を渡す
-            glowController.SetBlinkOffset(colorOffset);
+            //glowController.SetBlinkOffset(colorOffset);
 
             obj.GetComponent<BoxCollider>().enabled = false;
             // --------------------------------
