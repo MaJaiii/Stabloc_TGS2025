@@ -83,11 +83,4 @@ public class CameraController : MonoBehaviour
         return;
     }
 
-    public void DropMotionCamera()
-    {
-        return;
-        float tempY = transform.position.y;
-        transform.DOMoveY(tempY - .2f, .04f).OnComplete(() => transform.DOMoveY(tempY, .4f));
-    }
-
 }

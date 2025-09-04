@@ -379,7 +379,6 @@ public class BlockAction : MonoBehaviour
         audioSource.time = .5f;
         audioSource.Play();
         Rigidbody toRb = pivotObj.gameObject.AddComponent<Rigidbody>();
-        cameraController.DropMotionCamera();
         if (fillVertex[0] != fillVertex[1])
         {
             Vector3 dir = fillVertex[1] - fillVertex[0];

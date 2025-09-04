@@ -23,19 +23,17 @@ public class GameOver : MonoBehaviour
     [SerializeField]
     ScoreSystem scoreSystem;
 
-    [Header("Canvas")]
+    [Header("Canvas_CameraOverlay")]
     [SerializeField]
     Image background;
     [SerializeField]
     Transform title;
     [SerializeField]
+    TextMeshProUGUI scoreText;
+    [SerializeField]
     TextMeshProUGUI blockCount;
     [SerializeField]
     TextMeshProUGUI height;
-    [SerializeField]
-    TextMeshProUGUI blockCountNR;
-    [SerializeField]
-    TextMeshProUGUI heightNR;
     [SerializeField]
     TextMeshProUGUI restart;
     [SerializeField]
@@ -57,8 +55,7 @@ public class GameOver : MonoBehaviour
         foreach(Transform obj in title) obj.GetComponent<Image>().color = alpha;
         blockCount.color = alpha;
         height.color = alpha;
-        blockCountNR.gameObject.SetActive(false);
-        heightNR.gameObject.SetActive(false);
+        scoreText.color = alpha;
         restart.gameObject.SetActive(false);
         blank.color = black;
 
@@ -130,18 +127,23 @@ public class GameOver : MonoBehaviour
         yield return new WaitForSeconds(1f);
 
         // Update texts
+        scoreText.SetText("{0:000000}", scoreSystem.score);
         blockCount.text = $"You have placed {actionTimer.blockCount} blocks";
         height.text = $"It reached a height of {blockAction.height} meters";
+        
+        // Fade in block count
+        yield return StartCoroutine(changeAlpha(scoreText, 1, 0.5f));
 
         // Fade in block count
-        yield return StartCoroutine(changeAlpha(blockCount, 1, 0.5f));
+        yield return new WaitForSeconds(.5f);
+        yield return StartCoroutine(changeAlpha(blockCount, 1, 0.3f));
 
         // Wait, then fade in height
-        yield return new WaitForSeconds(1f);
-        yield return StartCoroutine(changeAlpha(height, 1, 0.5f));
+        yield return new WaitForSeconds(.5f);
+        yield return StartCoroutine(changeAlpha(height, 1, 0.3f));
 
         // Wait, then show restart button
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(.5f);
         restart.gameObject.SetActive(true);
 
         GameStatus.gameState = GAME_STATE.GAME_OVER;
