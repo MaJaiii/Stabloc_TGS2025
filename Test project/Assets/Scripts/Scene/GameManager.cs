@@ -11,7 +11,7 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     GAME_STATE nowGameState = GAME_STATE.GAME_TITLE;
     [SerializeField]
-    AudioSource gameAudioSource;
+    AudioClip bgm;
 
     [Header("Title")]
     [SerializeField, Tooltip("Ground parent object")] GameObject groundObj;
@@ -40,6 +40,7 @@ public class GameManager : MonoBehaviour
         InGameSetting.coreFrequency[0] = PlayerPrefs.GetInt("coreFrequency[0]");
         InGameSetting.coreFrequency[1] = PlayerPrefs.GetInt("coreFrequency[1]");
         InGameSetting.isCursorVisible = PlayerPrefs.GetInt("isCursorVisible") == 1;
+
     }
 
 
@@ -64,12 +65,12 @@ public class GameManager : MonoBehaviour
     }
     private void Start()
     {
+        AudioController.Instance.PlayBGM(bgm, InGameSetting.masterVolume);
+
         GameStatus.gameState = GAME_STATE.GAME_TITLE;
         ExecuteStateAction();
         cmdCount = 0;
         previewUI.SetActive(false);
-
-        gameAudioSource.volume = 0.0005f * InGameSetting.masterVolume;
     }
 
     void Update()

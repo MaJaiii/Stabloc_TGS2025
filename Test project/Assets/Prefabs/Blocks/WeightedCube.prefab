@@ -5111,6 +5111,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   origins: {x: 0, y: 0, z: 0, w: 0}
   pos: {x: 0, y: 0, z: 0}
+  showCornerPrefab: {fileID: 6549025454578617759, guid: c2f63f84d8ed4154a897e2793f35cfb2, type: 3}
 --- !u!114 &4242760209239821780
 MonoBehaviour:
   m_ObjectHideFlags: 0

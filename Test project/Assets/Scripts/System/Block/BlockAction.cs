@@ -34,12 +34,13 @@ public class BlockAction : MonoBehaviour
     [SerializeField] NextBlockPreview nextBlockPreview;
 
     [Header("Audio")]
-    [SerializeField]
-    AudioClip[] audioClips;
-    [SerializeField]
-    AudioSource bgmSource;
-    [SerializeField]
-    int deltaFreq;
+    [SerializeField] AudioClip ingameBGM;
+    [SerializeField] AudioClip startSE;
+    [SerializeField] AudioClip generateSE;
+    [SerializeField] AudioClip moveSE;
+    [SerializeField] AudioClip rotationSE;
+    [SerializeField] AudioClip dropSE;
+    [SerializeField] int deltaFreq;
 
 
     [Header("TGS")]
@@ -132,7 +133,6 @@ public class BlockAction : MonoBehaviour
         audioSource.volume = .001f * InGameSetting.masterVolume;
 
         blockCount = 0;
-        totalPCMFrequency = bgmSource.clip.frequency * (int)bgmSource.clip.length;
 
         lastGroundLevel = -4;
 
@@ -194,18 +194,16 @@ public class BlockAction : MonoBehaviour
         else
             do { HandleNewBlockSpawn(); } while (blockHistory[2] == -1);
 
-        if (nowFreq != prevFreq)
+        if (true || nowFreq != prevFreq)
         {
             prevFreq = nowFreq;
             StartCoroutine(Execution());
         }
-        nowFreq = bgmSource.timeSamples - bgmSource.timeSamples % deltaFreq;
 
     }
 
     IEnumerator Execution()
     {
-        Debug.Log("1");
         if ((flagStatus & FlagsStatus.Drop) == FlagsStatus.Drop)
         {
             flagStatus &= ~FlagsStatus.Drop;
@@ -224,6 +222,8 @@ public class BlockAction : MonoBehaviour
                 if ((flagStatus & FlagsStatus.FirstDrop) == FlagsStatus.FirstDrop)
                 {
                     flagStatus &= ~FlagsStatus.FirstDrop;
+                    AudioController.Instance.PlaySFX(startSE, InGameSetting.masterVolume * 5);
+                    AudioController.Instance.PlayBGM(ingameBGM, InGameSetting.masterVolume);
                     rb.DOMoveY((ghostSystem.ghostBlock.position + Vector3.up * .5f).y, 1f).SetEase(Ease.InSine);
                     Vector3 maxValue = pivotObj.position + new Vector3(2, 0, 2);
                     Vector3 minValue = pivotObj.position - new Vector3(2, 0, 2);
@@ -273,7 +273,6 @@ public class BlockAction : MonoBehaviour
             }
             if ((flagStatus & FlagsStatus.GenerateBlock) == FlagsStatus.GenerateBlock)
             {
-                Debug.Log("2");
                 if (blockHistory[blockHistory.Length - 1] != -1 && !isCreating)
                 {
                     GenerateBlock(blockHistory[blockHistory.Length - 1]);
@@ -327,7 +326,7 @@ public class BlockAction : MonoBehaviour
         if (pivotObj == null || collision == null || (!collision.gameObject.CompareTag("Ground") && !collision.gameObject.CompareTag("Placed") && (flagStatus & FlagsStatus.Connectable) != FlagsStatus.Connectable)) return;
 
         actionTimer.blockCount++;
-
+        AudioController.Instance.PlaySFX(dropSE, InGameSetting.masterVolume);
 
         pivotObj.tag = "Placed";
         pivotObj.parent = null;
@@ -376,10 +375,6 @@ public class BlockAction : MonoBehaviour
             }
             child.tag = "Placed";
         }
-
-        audioSource.clip = audioClips[0];
-        audioSource.time = .5f;
-        audioSource.Play();
         Rigidbody toRb = pivotObj.gameObject.AddComponent<Rigidbody>();
         if (fillVertex[0] != fillVertex[1])
         {
@@ -583,8 +578,10 @@ public class BlockAction : MonoBehaviour
 
         // Preview where it will move
         moveInput = rb.position + moveDir;
+        
 
         flagStatus |= FlagsStatus.Move;
+        AudioController.Instance.PlaySFX(moveSE, InGameSetting.masterVolume);
         moveInputCooldown = .1f;
         moveInput = new Vector3Int(Mathf.RoundToInt(moveInput.x), Mathf.RoundToInt(moveInput.y), Mathf.RoundToInt(moveInput.z));
         transform.position = moveInput;
@@ -635,6 +632,7 @@ public class BlockAction : MonoBehaviour
             }
         }
         rotateInputCooldown = .2f;
+        AudioController.Instance.PlaySFX(rotationSE, InGameSetting.masterVolume);
         BlockDORotateAround(axis, .2f, Mathf.Sign(readValue.x));
 
     }
@@ -692,7 +690,6 @@ public class BlockAction : MonoBehaviour
         }
 
         Destroy(pivotObj?.gameObject);
-        audioSource.PlayOneShot(audioClips[1]);
         cameraController.SwitchCamera(true);
         gameOver.isGameOver = true;
     }
@@ -858,13 +855,14 @@ public class BlockAction : MonoBehaviour
         {
             genPos.x = origin.x; genPos.z = origin.z; genPos.y += 2;
         }
-        cameraController.MoveCamera(genPos);        
-        genPos.y += 08;
+        cameraController.MoveCamera(genPos, genPos.y - (lastGroundLevel + 8));        
+        genPos.y += 8;
 
 
         transform.position = RoundOffVec3(genPos);
         transform.rotation = Quaternion.identity;
 
+        AudioController.Instance.PlaySFX(generateSE, InGameSetting.masterVolume);
 
         pivotObj = new GameObject($"Block {blockCount}").transform;
         pivotObj.parent = transform;
@@ -876,7 +874,7 @@ public class BlockAction : MonoBehaviour
         foreach (Vector3 offset in PentacubeShapes.Shapes[blockType])
         {
             GameObject obj;
-            if (offset == Vector3.zero && blockCount % InGameSetting.coreFrequency[0] >= InGameSetting.coreFrequency[1])
+            if (offset == Vector3.zero && blockCount % InGameSetting.coreFrequency[0] < InGameSetting.coreFrequency[1])
             {
                 obj = Instantiate(weightedCubePrefab, transform.position + offset, Quaternion.identity, pivotObj);
                 weightedBlockOffset = offset;
@@ -910,7 +908,6 @@ public class BlockAction : MonoBehaviour
             obj.GetComponent<MeshRenderer>().enabled = true;
             cubeCount++;
         }
-
 
         if (ghostSystem != null && index != 0)
         {

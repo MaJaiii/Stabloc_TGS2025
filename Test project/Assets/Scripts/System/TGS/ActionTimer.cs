@@ -5,12 +5,12 @@ using UnityEngine.UI;
 
 public class ActionTimer : MonoBehaviour
 {
-    [SerializeField] Image[] overallTimer;
-    [SerializeField] Image[] bonusTimer;
+    [SerializeField] Image[] timerEdges;
     [SerializeField] TextMeshProUGUI blockCountText;
     [SerializeField] public float timer;
     [SerializeField] BlockAction blockAction;
     [SerializeField] int maxTime;
+    [SerializeField] float fillAmount;
 
     ScoreSystem scoreSystem;
     public int blockCount = 0;
@@ -50,19 +50,51 @@ public class ActionTimer : MonoBehaviour
                 blockAction.flagStatus |= FlagsStatus.Drop;
 
             }
-            if (Gamepad.current != null)
+            if (Gamepad.current != null && timer < 3)
             {
                 var gp = Gamepad.current;
-                float motor = Mathf.Max(0, 5 - timer) / 5;
+                float motor = Mathf.Max(0, 3 - timer) / 3;
                 gp.SetMotorSpeeds(motor, motor);
+
+                foreach (var image in timerEdges)
+                {
+                    if (timer % .5f > .25f) image.color = Color.red;
+                    else image.color = Color.white;
+                }
             }
         }
         else Gamepad.current?.SetMotorSpeeds(0, 0);
-        for (int i = 0; i < overallTimer.Length; i++)
+
+        fillAmount = (timer/maxTime) * 5920;
+
+        int[] lengths = new int[] { 510, 1910, 1050, 1910, 540 };
+
+
+
+        // Define segment sizes in the same order as your conditions
+        int[] segmentSizes = { 510, 1910, 1050, 1910, 540 };
+
+        // Reset all fills
+        for (int i = 0; i < timerEdges.Length; i++)
+            timerEdges[i].fillAmount = 0f;
+
+        float remaining = fillAmount;
+
+        // Loop through segments from last to first (because your original code started at index 4)
+        for (int i = segmentSizes.Length - 1; i >= 0; i--)
         {
-            overallTimer[i].fillAmount = Mathf.Max(0, Mathf.Min(6, timer)) / 6;
-            bonusTimer[i].fillAmount = Mathf.Max(0, Mathf.Min(maxTime, timer)) / maxTime;
-            bonusTimer[i].color = blockAction.PentacubeColors[blockAction.colorHistory[blockAction.colorHistory.Length - 1]];
+            if (remaining <= 0) break;
+
+            if (remaining < segmentSizes[i])
+            {
+                timerEdges[i].fillAmount = remaining / (float)segmentSizes[i];
+                break;
+            }
+            else
+            {
+                timerEdges[i].fillAmount = 1f;
+                remaining -= segmentSizes[i];
+            }
         }
         blockCountText.text = $"{blockCount} blocks placed";
     }
@@ -70,6 +102,10 @@ public class ActionTimer : MonoBehaviour
     public void RecoveryTimer()
     {
         isRecovery = true;
+        foreach (var image in timerEdges)
+        {
+            image.color = Color.white;
+        }
     }
 
     public void AddPoint(float height, int score = 0)

@@ -30,7 +30,7 @@ public class InputFieldManager : MonoBehaviour
                 inputField.text = InGameSetting.coreFrequency[1].ToString();
                 break;
             default:
-                Debug.LogError($"{gameObject.name} is not set to a valid subject!");
+                Debug.LogError($"{transform.parent.name} is not set to a valid subject!");
                 break;
         }
     }

@@ -5,11 +5,24 @@ public class CheckCore : MonoBehaviour
     public Vector4 origins;
 
     [SerializeField] public Vector3 pos;
+    [SerializeField] GameObject showCornerPrefab;
 
+    GameObject showCornerParentObj;
+
+    float timer = 0;
 
     // Update is called once per frame
     void Update()
     {
+        if (gameObject.CompareTag("Placed"))
+        {
+            timer += Time.deltaTime;
+            if (timer > 5)
+            {
+                timer = 0;
+                ShowCorner();
+            }
+        }
         origins = new Vector4(GameStatus.fieldOrigin.x - 2, GameStatus.fieldOrigin.z - 2, GameStatus.fieldOrigin.x + 2, GameStatus.fieldOrigin.z + 2);
         pos = transform.position;
         pos.x = Mathf.RoundToInt(pos.x);
@@ -17,8 +30,15 @@ public class CheckCore : MonoBehaviour
         pos.y = Mathf.RoundToInt(pos.y);
     }
 
-    void ShowCorner()
+    public void ShowCorner()
     {
+
+        if (showCornerParentObj != null)
+        {
+            Destroy(showCornerParentObj);
+            return;
+        }
+
         pos = transform.position;
         pos.x = Mathf.RoundToInt(pos.x);
         pos.z = Mathf.RoundToInt(pos.z);
@@ -31,32 +51,55 @@ public class CheckCore : MonoBehaviour
         Ray rayFromThisToForward = new Ray(pos, Vector3.forward);   //z+
         Ray rayFromThisToBack = new Ray(pos, Vector3.back);         //z-
 
-        bool[] isShow = {true, true, true};
+        Vector3[] toBeShowPos = new Vector3[3];
+
+        GameObject[] placedObjs = GameObject.FindGameObjectsWithTag("Placed");
 
         if (pos.x == origins.x && pos.z == origins.y)       //Position0 (-2,-2)
         {
-            RaycastHit[] hit0 = Physics.RaycastAll(rayFromThisToForward, 6);
-            foreach (RaycastHit hit in hit0)
+            toBeShowPos[0] = new Vector3(origins.x, pos.y, origins.w);
+            toBeShowPos[1] = new Vector3(origins.z, pos.y, origins.y);
+            toBeShowPos[2] = new Vector3(origins.z, pos.y, origins.w);
+        }
+        else if (pos.x == origins.x && pos.z == origins.w)       //Position1 (-2,2)
+        {
+            toBeShowPos[0] = new Vector3(origins.x, pos.y, origins.y);
+            toBeShowPos[1] = new Vector3(origins.z, pos.y, origins.y);
+            toBeShowPos[2] = new Vector3(origins.z, pos.y, origins.w);
+        }
+        else if (pos.x == origins.x && pos.z == origins.y)       //Position0 (2,2)
+        {
+            toBeShowPos[0] = new Vector3(origins.x, pos.y, origins.w);
+            toBeShowPos[1] = new Vector3(origins.z, pos.y, origins.y);
+            toBeShowPos[2] = new Vector3(origins.z, pos.y, origins.w);
+        }
+        else if (pos.x == origins.x && pos.z == origins.y)       //Position0 (2,-2)
+        {
+            toBeShowPos[0] = new Vector3(origins.x, pos.y, origins.w);
+            toBeShowPos[1] = new Vector3(origins.z, pos.y, origins.y);
+            toBeShowPos[2] = new Vector3(origins.z, pos.y, origins.w);
+        }
+        else return;
+        foreach (GameObject obj in placedObjs)
+        {
+            if (obj.GetComponent<BlockFade>() == null) continue;
+            for (int i = 0; i < toBeShowPos.Length; i++)
             {
-                if (hit.collider.GetComponent<BlockFade>()?.worldPos.z != origins.w) continue;      //Check if the hit object is block
-                if (hit.collider.GetComponent<CheckCore>() == null) return;                         //Check if there is already a non-core block
-                isShow[0] = false;
+                if (obj.GetComponent<BlockFade>().worldPos == toBeShowPos[i])
+                {
+                    if (obj.GetComponent<CheckCore>() == null) return;
+                    toBeShowPos[i] = new Vector3(99999, 99999, 99999);
+                    break;
+                }
             }
-            hit0 = Physics.RaycastAll(rayFromThisToRight, 6);
-            foreach (RaycastHit hit in hit0)
+        }
+        showCornerParentObj = new GameObject($"showCorner_y: {pos.y}");
+        showCornerParentObj.transform.position = pos;
+        for (int i = 0; i < toBeShowPos.Length; i++)
+        {
+            if (toBeShowPos[i] != new Vector3(99999, 99999, 99999))
             {
-                if (hit.collider.GetComponent<BlockFade>()?.worldPos.x != origins.z) continue;      //Check if the hit object is block
-                if (hit.collider.GetComponent<CheckCore>() == null) return;                         //Check if there is already a non-core block
-                isShow[1] = false;
-            }
-            Vector3 tempPos = pos;
-            tempPos.x = origins.z;
-            hit0 = Physics.RaycastAll(tempPos, Vector3.forward, 6);
-            foreach (RaycastHit hit in hit0)
-            {
-                if (hit.collider.GetComponent<BlockFade>()?.worldPos.x != origins.z) continue;      //Check if the hit object is block
-                if (hit.collider.GetComponent<CheckCore>() == null) return;                         //Check if there is already a non-core block
-                isShow[2] = false;
+                Instantiate(showCornerPrefab, toBeShowPos[i], Quaternion.identity, showCornerParentObj.transform);
             }
         }
     }

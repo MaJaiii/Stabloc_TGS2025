@@ -43,7 +43,7 @@ public class GhostBlockPreview : MonoBehaviour
         foreach (Transform child in ghostBlock)
         {
             Destroy(child.GetChild(0).gameObject);
-            DestroyImmediate(child.GetComponent<Collider>());
+            DestroyImmediate(child.GetComponent<BoxCollider>());
             DestroyImmediate(child.GetComponent<Rigidbody>());
 
             var renderer = child.GetComponent<MeshRenderer>();
@@ -100,6 +100,7 @@ public class GhostBlockPreview : MonoBehaviour
                 foreach (var hit in hits)
                 {
                     if (hit.collider.gameObject == child.gameObject) continue;
+                    if (!hit.collider.CompareTag("Placed") && !hit.collider.CompareTag("Ground") && hit.collider.CompareTag("GameOver")) continue;
                     float drop = child.position.y - hit.point.y;
                     if (drop < minDrop)
                     {
@@ -136,7 +137,6 @@ public class GhostBlockPreview : MonoBehaviour
                             if (vertex[i].z < minVertex.z) minVertex.z = vertex[i].z;
                             else if (vertex[i].z > maxVertex.z) maxVertex.z = vertex[i].z;
                         }
-                        Debug.Log($"{maxVertex} {minVertex}");
                         blockAction.fillVertex[0] = minVertex;
                         blockAction.fillVertex[1] = maxVertex;
                         GameObject[] placedObj = GameObject.FindGameObjectsWithTag("Placed");

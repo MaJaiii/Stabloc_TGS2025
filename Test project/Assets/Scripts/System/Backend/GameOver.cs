@@ -58,8 +58,6 @@ public class GameOver : MonoBehaviour
         scoreText.color = alpha;
         restart.gameObject.SetActive(false);
         blank.color = black;
-
-        bgm.GetComponent<AudioSource>().volume = 0.0005f * InGameSetting.masterVolume;
     }
 
     private void Update()
@@ -102,7 +100,7 @@ public class GameOver : MonoBehaviour
             yield return new WaitForSeconds(.1f);
         }
         yield return new WaitForSeconds(.5f);
-        SceneManager.LoadScene("SampleScene");
+        SceneManager.LoadScene("SampleScene_Ma");
 
     }
 
