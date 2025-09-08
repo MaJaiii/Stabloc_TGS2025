@@ -79,24 +79,24 @@ public class CameraController : MonoBehaviour
 
     public void MoveCamera(Vector3 pos, float yDiff = 0)
     {
-        if (yDiff < 0) yDiff = 0;
+        float rotateY = points[cameraIndex].localRotation.eulerAngles.y;
+        if (pos.y < transform.position.y) pos.y = transform.position.y;
         if (pos.y > 1 && pos.y > transform.position.y)
         {
             transform.DOMoveY((pos.y - 1), .3f).SetEase(Ease.OutSine);
-            //float tempR = cameraObj.localRotation.eulerAngles.y;
-            //Debug.Log(yDiff);
+            if (yDiff > 0)
+            {
+                cameraObj.DORotate(new Vector3(Mathf.Atan(Mathf.Tan(10 * Mathf.Deg2Rad) + yDiff / 15) * Mathf.Rad2Deg, rotateY, 0), .3f);
+                transform.DOMoveY(pos.y, .3f);
+                cameraObj.DOMove(points[cameraIndex].position + new Vector3(Mathf.Sign(points[cameraIndex].position.x) * ( - 1 / (yDiff * yDiff)), 0, Mathf.Sign(points[cameraIndex].position.z) * ( - 1 / (yDiff * yDiff))), .3f);
+            }
+            else
+            {
+                cameraObj.DORotate(new Vector3(10, rotateY, 0), .3f);
+                cameraObj.DOMove(points[cameraIndex].position, .3f);
+                transform.DOMoveY(pos.y, .3f);
+            }
 
-            //// Clamp to prevent domain errors in Asin
-            //float safeYDiff = Mathf.Clamp(yDiff, -1f, 1f);
-
-            //// Convert Asin from radians Å® degrees
-            //float angleX = 10f + Mathf.Asin(safeYDiff) * Mathf.Rad2Deg;
-
-            //// Apply only if result is valid
-            //if (!float.IsNaN(angleX))
-            //{
-            //    cameraObj.localRotation = Quaternion.Euler(angleX, tempR, 0f);
-            //}
         }
         return;
     }

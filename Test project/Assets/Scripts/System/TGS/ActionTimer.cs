@@ -33,7 +33,7 @@ public class ActionTimer : MonoBehaviour
         if (isGameOver) return;
         if (isRecovery)
         {
-            timer += Time.deltaTime * 15;
+            timer += Time.deltaTime * maxTime * 1.5f;
             if (timer > maxTime)
             {
                 timer = maxTime;

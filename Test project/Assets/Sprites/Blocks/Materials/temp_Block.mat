@@ -21,20 +21,19 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: temp_Block
-  m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
-  m_Parent: {fileID: 2100000, guid: b06efae971a43484ead56da0cbda1b89, type: 2}
+  m_Shader: {fileID: 4800000, guid: 12d23a6845e49b445904498f331041a1, type: 3}
+  m_Parent: {fileID: 2100000, guid: e11d471eac9a14e488b30e6f581b4fec, type: 2}
   m_ModifiedSerializedProperties: 16
-  m_ValidKeywords:
+  m_ValidKeywords: []
+  m_InvalidKeywords:
   - _ALPHAPREMULTIPLY_ON
   - _SPECULAR_SETUP
   - _SURFACE_TYPE_TRANSPARENT
-  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: 3000
-  stringTagMap:
-    RenderType: Transparent
+  stringTagMap: {}
   disabledShaderPasses:
   - MOTIONVECTORS
   - DepthOnly
@@ -55,9 +54,11 @@ Material:
     m_Floats:
     - _DstBlend: 10
     - _DstBlendAlpha: 10
+    - _EmissionStrength: 19.7
     - _Surface: 1
     - _WorkflowMode: 0
     - _ZWrite: 0
-    m_Colors: []
+    m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 0.49803922}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -100,7 +100,7 @@ public class GhostBlockPreview : MonoBehaviour
                 foreach (var hit in hits)
                 {
                     if (hit.collider.gameObject == child.gameObject) continue;
-                    if (!hit.collider.CompareTag("Placed") && !hit.collider.CompareTag("Ground") && hit.collider.CompareTag("GameOver")) continue;
+                    if (!hit.collider.CompareTag("Placed") && !hit.collider.CompareTag("Ground") && !hit.collider.CompareTag("GameOver")) continue;
                     float drop = child.position.y - hit.point.y;
                     if (drop < minDrop)
                     {
