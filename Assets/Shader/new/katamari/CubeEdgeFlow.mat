@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: CubeEdgeFlow
+  m_Shader: {fileID: 4800000, guid: 4298e3cac329c7e4d8e7d94fcfa136b6, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3001
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: f88677df267a41d6be1e7a6133e7d227, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CowPatternTex:
+        m_Texture: {fileID: 2800000, guid: 283f897e4925411ebbaa758b4cb13fc2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 13d2b573cb7406348a076645d89e228f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _DiffusionSize: 8.96
+    - _DiffusionSpeed: 1
+    - _GlowFalloff: 1
+    - _GlowIntensity: 100
+    - _GlowPower: 100
+    - _GlowWidth: 0.101
+    - _LineThickness: 0.196
+    - _Opacity: 0.2
+    - _PatternScale: 1
+    - _Speed: 1
+    - _Transparency: 1
+    m_Colors:
+    - _BaseColor: {r: 1, g: 0, b: 0.06613159, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _GlowColor: {r: 0.9151964, g: 1, b: 0.08018869, a: 1}
+    - _LineColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
